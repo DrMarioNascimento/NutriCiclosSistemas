@@ -1,4 +1,5 @@
 import { getRequest } from "@tanstack/react-start/server";
+import { getSql } from "../db";
 import { gateIdentityEnabled } from "./gate-identity.server";
 import { auth, authConfigured } from "./server";
 
@@ -93,5 +94,19 @@ export async function requireUserId(bearerToken?: string): Promise<string> {
   }
   const user = await getSessionUser(bearerToken);
   if (!user) throw new UnauthorizedError();
-  return user.id;
+  return clinicaDe(user.id);
+}
+
+async function clinicaDe(authUserId: string): Promise<string> {
+  try {
+    const sql = await getSql();
+    const rows = await sql<{ clinica_id: string }>`
+      select clinica_id from acessos where auth_user_id = ${authUserId} limit 1
+    `;
+    const id = rows[0]?.clinica_id;
+    if (id) return id;
+  } catch {
+    /* a tabela de acessos ainda não existe */
+  }
+  return authUserId;
 }

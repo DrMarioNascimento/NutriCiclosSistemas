@@ -1,8 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { exportarBackup, getMarca } from "@/lib/clinic/api";
 import { estadoNuvem, gravarNaNuvem, jaEnviadoHoje } from "@/lib/clinic/nuvem-backup";
-import { GROK_PROVIDERS, signIn } from "@/lib/auth/client";
+import { entrarComEmail, criarPrimeiroAcesso, GROK_PROVIDERS, signIn } from "@/lib/auth/client";
+import { temConta } from "@/lib/clinic/acessos";
+import { Button, Campo, Erro, Input } from "./ui";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { srcLogo, useLogoEnquadrado } from "./folha-papel";
@@ -37,26 +39,88 @@ function Marca({ nome = "NutriCiclos", linha = "Clínica de nutrição", logo = 
 }
 
 export function Entrada() {
+  const [tem, setTem] = useState<boolean | null>(null);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const google =
+    typeof window !== "undefined" && window.location.hostname.endsWith(".grok-sandbox.com");
+
+  useEffect(() => {
+    temConta()
+      .then((r) => setTem(r.tem))
+      .catch(() => setTem(true));
+  }, []);
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    setOcupado(true);
+    setErro(null);
+    try {
+      if (tem) await entrarComEmail(email.trim(), senha);
+      else await criarPrimeiroAcesso(nome.trim(), email.trim(), senha);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível entrar.");
+      setOcupado(false);
+    }
+  }
+
   return (
     <main className="grid min-h-screen place-items-center bg-paper px-6 py-16">
       <div className="painel w-full max-w-md">
         <Marca />
         <h1 className="mt-8 font-serif text-4xl text-ink">O consultório, sem a planilha.</h1>
         <p className="mt-3 text-ink-2">
-          Prontuário, avaliação, cardápio e a agenda da nutricionista. Os dados ficam na conta de quem entra.
+          {tem === false
+            ? "Crie o primeiro acesso da clínica. Quem entrar depois é incluído em Sistema."
+            : "Entre com o e-mail e a senha da clínica."}
         </p>
-        <div className="mt-8 flex flex-col gap-2">
-          {GROK_PROVIDERS.map((p) => (
-            <button
-              key={p.providerId}
-              type="button"
-              onClick={() => signIn(p.providerId, { callbackURL: "/" })}
-              className="min-h-11 rounded-lg border border-line bg-cream px-4 text-sm font-semibold text-ink hover:bg-sand"
-            >
-              Continuar com {p.label}
-            </button>
-          ))}
-        </div>
+        <form className="mt-8 flex flex-col gap-3" onSubmit={(e) => void enviar(e)}>
+          {tem === false ? (
+            <Campo label="Nome">
+              <Input value={nome} onChange={(e) => setNome(e.target.value)} required autoComplete="name" />
+            </Campo>
+          ) : null}
+          <Campo label="E-mail">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="username"
+            />
+          </Campo>
+          <Campo label="Senha">
+            <Input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+              minLength={8}
+              autoComplete={tem === false ? "new-password" : "current-password"}
+            />
+          </Campo>
+          <Erro>{erro}</Erro>
+          <Button type="submit" disabled={ocupado || tem === null}>
+            {ocupado ? "Entrando…" : tem === false ? "Criar o acesso" : "Entrar"}
+          </Button>
+        </form>
+        {google ? (
+          <div className="mt-4 flex flex-col gap-2">
+            {GROK_PROVIDERS.map((p) => (
+              <button
+                key={p.providerId}
+                type="button"
+                onClick={() => signIn(p.providerId, { callbackURL: "/" })}
+                className="min-h-11 rounded-lg border border-line bg-cream px-4 text-sm font-semibold text-ink hover:bg-sand"
+              >
+                Continuar com {p.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <p className="mt-6 text-sm text-muted">Osana Melo · CRN-10 6463 · Florianópolis</p>
       </div>
     </main>
