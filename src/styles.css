@@ -24,7 +24,7 @@
   --depth-highlight: inset 0 1px 0 #fff, inset 1px 0 0 rgba(255, 255, 255, 0.65);
   --depth-control: var(--depth-highlight), inset 0 -1px 0 rgba(138, 69, 33, 0.12), 0 2px 0 #d8bfa5, 0 3px 0 #c5a588, 0 6px 10px -4px rgba(66, 39, 21, 0.28);
   --depth-card: var(--depth-highlight), inset 0 -1px 0 rgba(138, 69, 33, 0.12), 0 1px 0 #e4d3bf, 0 3px 0 #ddc7ae, 0 5px 0 #cdb194, 0 7px 6px -3px rgba(66, 39, 21, 0.22), 0 18px 26px -12px rgba(66, 39, 21, 0.3);
-  --depth-panel: var(--depth-highlight), 0 2px 0 #e4d3bf, 0 5px 0 #d7bea4, 0 8px 0 #c3a182, 0 12px 10px -5px rgba(66, 39, 21, 0.22), 0 26px 42px -18px rgba(66, 39, 21, 0.35);
+  --depth-panel: var(--depth-highlight), 0 3px 0 rgba(168, 128, 92, 0.16), 0 12px 20px -18px rgba(42, 26, 16, 0.38);
   --depth-inset: inset 0 2px 3px rgba(66, 39, 21, 0.18), inset 1px 1px 6px rgba(66, 39, 21, 0.08), 0 1px 0 #fff;
 }
 
@@ -101,7 +101,10 @@
     }
     button[data-variant="ghost"]:hover:not(:disabled) {
       transform: none;
-      box-shadow: inset 0 1px 2px rgba(66, 39, 21, 0.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        0 2px 0 rgba(62, 32, 14, 0.18),
+        0 6px 10px rgba(42, 26, 16, 0.08);
     }
   }
   :is(button.rounded-lg, button.rounded-xl, button.rounded-full, button.rounded-2xl, a.acao):active:not(:disabled) {
@@ -114,7 +117,7 @@
     box-shadow: none;
   }
 
-  .cartao, section.rounded-2xl, li.rounded-2xl {
+  .cartao, li.rounded-2xl {
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(255, 252, 248, 0.3) 50%, rgba(214, 183, 149, 0.25));
     border-color: #e4d4c2;
     box-shadow: var(--depth-card);
@@ -146,11 +149,14 @@
     background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.45), transparent);
     box-shadow: var(--depth-control), inset 3px 0 0 var(--color-copper);
   }
-  .icone-nav {
-    /* Preserve the sculpted SVG artwork and its single, shared light source. */
-    overflow: visible;
+  .nav-icone {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: none;
+    object-fit: contain;
+    object-position: center;
   }
-  .nav-item:not([aria-current="page"]) .icone-nav { opacity: 0.9; }
   .selo {
     position: relative;
     isolation: isolate;
@@ -218,11 +224,9 @@
   *,
   *::before,
   *::after {
-    transition: none !important;
-    animation: none !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :is(button, a.acao) { transform: none !important; }
 }
