@@ -77,14 +77,15 @@ function ItemNav({
   return (
     <Link
       to={to}
+      aria-label={label}
+      title={label}
       aria-current={ativo ? "page" : undefined}
       className={cx(
-        "nav-item flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-sm font-medium",
+        "nav-item flex min-h-[4.5rem] w-full items-center justify-center rounded-lg px-2",
         ativo ? "bg-copper-soft text-copper-deep" : "text-ink-2 hover:bg-sand",
       )}
     >
       <img className="nav-icone" src={icon} alt="" decoding="async" />
-      {label}
     </Link>
   );
 }
