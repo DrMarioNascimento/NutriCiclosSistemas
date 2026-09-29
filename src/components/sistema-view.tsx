@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { criarAcesso, excluirAcesso, listarAcessos, type AcessoItem } from "@/lib/clinic/acessos";
 import { excluirDieta, excluirModeloCardapio, getSistema, salvarClinica, salvarModelo, salvarReferencias } from "@/lib/clinic/api";
 import type { ModeloSalvo, ReferenciaExame, Sistema } from "@/lib/clinic/types";
 import { srcLogo, useLogoEnquadrado } from "./folha-papel";
@@ -38,6 +39,7 @@ type Secao =
   | "clinica"
   | "parametros"
   | "listas"
+  | "acesso"
   | "profissionais"
   | "modelos"
   | "cardapios"
@@ -60,6 +62,7 @@ const CARDS: Array<[Secao, string, string]> = [
   ["profissionais", "Equipe", "Nutrição, outros profissionais e administrativo"],
   ["formulas", "Fórmulas e referências", "O que o app calcula e a fonte"],
   ["listas", "Listas de opções", "Objetivos, atividade, refeições e alergias"],
+  ["acesso", "Login de acesso", "E-mail e senha de quem abre o prontuário"],
   ["cardapios", "Modelos de cardápio", "Planos prontos, por tema"],
   ["dietas", "Modelos de dieta", "Metas e substituições, por indicação"],
   ["modelos", "Modelos de documentos", "TCLE, declaração, atestado, orientações"],
@@ -112,6 +115,7 @@ export function SistemaView() {
         {secao === "clinica" ? <FormClinica sistema={sistema} onSalvo={carregar} /> : null}
         {secao === "parametros" ? <FormParametros sistema={sistema} onSalvo={carregar} /> : null}
         {secao === "listas" ? <FormListas sistema={sistema} onSalvo={carregar} /> : null}
+        {secao === "acesso" ? <FormAcesso /> : null}
         {secao === "profissionais" ? <FormProfissionais sistema={sistema} onSalvo={carregar} /> : null}
         {secao === "modelos" ? <FormModelos modelos={sistema.modelos} onSalvo={carregar} /> : null}
         {secao === "cardapios" ? <ListaCardapios sistema={sistema} onSalvo={carregar} /> : null}
@@ -130,6 +134,105 @@ export function SistemaView() {
         NutriCiclos v5.0 · 2026-09-28
       </p>
     </div>
+  );
+}
+
+function FormAcesso() {
+  const [itens, setItens] = useState<AcessoItem[]>([]);
+  const [local, setLocal] = useState(false);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  async function carregar() {
+    const dados = await listarAcessos();
+    setLocal(dados.local);
+    setItens(dados.itens);
+  }
+
+  useEffect(() => {
+    carregar().catch((e) => setErro(e instanceof Error ? e.message : "Não foi possível abrir os acessos."));
+  }, []);
+
+  async function criar(e: FormEvent) {
+    e.preventDefault();
+    setOcupado(true);
+    setErro(null);
+    setOk(null);
+    try {
+      await criarAcesso({ data: { nome, email, senha } });
+      setNome("");
+      setEmail("");
+      setSenha("");
+      setOk("Acesso criado. A pessoa entra com este e-mail e esta senha.");
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível criar o acesso.");
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function remover(id: string) {
+    setErro(null);
+    setOk(null);
+    try {
+      await excluirAcesso({ data: { id } });
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível remover.");
+    }
+  }
+
+  return (
+    <Cartao>
+      <h2 className="font-serif text-2xl">Login de acesso</h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Cada pessoa tem o próprio e-mail e a própria senha. Todas veem o mesmo prontuário.
+      </p>
+      {local ? (
+        <p className="mt-4 text-sm text-ink-2">
+          Neste computador o consultório abre sem senha. Os acessos passam a ser pedidos no site, quando o banco estiver ligado.
+        </p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-2">
+          {itens.length === 0 ? <li className="text-sm text-muted">Ainda não há acesso. O primeiro é criado na tela de entrada.</li> : null}
+          {itens.map((item) => (
+            <li key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper px-3 py-2">
+              <span>
+                <span className="block text-sm font-semibold text-ink">{item.nome || item.email}</span>
+                <span className="block text-sm text-muted">{item.email}{item.dono ? " · primeiro acesso" : ""}</span>
+              </span>
+              {item.dono || item.eu ? null : (
+                <Button type="button" variant="ghost" onClick={() => void remover(item.id)}>
+                  Remover
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="mt-5 flex flex-col gap-3" onSubmit={(e) => void criar(e)}>
+        <Campo label="Nome">
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} required disabled={local} autoComplete="name" />
+        </Campo>
+        <Campo label="E-mail">
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={local} autoComplete="off" />
+        </Campo>
+        <Campo label="Senha">
+          <Input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={8} disabled={local} autoComplete="new-password" />
+        </Campo>
+        <p className="text-sm text-muted">No mínimo 8 caracteres. Diga a senha à pessoa. Ela não aparece de novo.</p>
+        <Erro>{erro}</Erro>
+        {ok ? <p className="text-sm text-copper-deep">{ok}</p> : null}
+        <Button type="submit" disabled={ocupado || local}>
+          {ocupado ? "Criando…" : "Criar acesso"}
+        </Button>
+      </form>
+    </Cartao>
   );
 }
 

@@ -234,3 +234,24 @@ export async function signOut(redirectTo = "/"): Promise<void> {
     },
   });
 }
+
+export async function entrarComEmail(email: string, senha: string): Promise<void> {
+  const { error } = await authClient.signIn.email({ email, password: senha });
+  if (error) throw new Error(textoDoAcesso(error.message));
+  window.location.href = "/";
+}
+
+export async function criarPrimeiroAcesso(nome: string, email: string, senha: string): Promise<void> {
+  const { error } = await authClient.signUp.email({ name: nome, email, password: senha });
+  if (error) throw new Error(textoDoAcesso(error.message));
+  await entrarComEmail(email, senha);
+}
+
+function textoDoAcesso(mensagem?: string) {
+  const texto = mensagem ?? "";
+  if (/invalid email or password/i.test(texto)) return "E-mail ou senha não conferem.";
+  if (/already|exists/i.test(texto)) return "Este e-mail já tem acesso.";
+  if (/password/i.test(texto) && /short|least|8/i.test(texto)) return "A senha precisa de pelo menos 8 caracteres.";
+  if (texto) return texto;
+  return "Não foi possível entrar.";
+}

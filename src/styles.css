@@ -151,17 +151,29 @@
   }
   .nav-icone {
     display: block;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 3.75rem;
+    height: 3.75rem;
     flex: none;
     object-fit: contain;
     object-position: center;
+  }
+  .barra .nav-icone {
+    width: 2.25rem;
+    height: 2.25rem;
   }
   .selo {
     position: relative;
     isolation: isolate;
     background-image: linear-gradient(145deg, #fffefd 25%, #efdfce);
-    box-shadow: inset 0 2px 3px #fff, inset 2px 0 4px rgba(255, 255, 255, 0.9), inset 0 -4px 5px rgba(138, 69, 33, 0.2), 0 1px 0 #e8d1b6, 0 3px 0 #cda782, 0 5px 0 #a97b53, 0 9px 8px -4px rgba(66, 39, 21, 0.3), 0 15px 22px -8px rgba(66, 39, 21, 0.32);
+    box-shadow:
+      inset 0 2px 3px #fff,
+      inset 2px 0 4px rgba(255, 255, 255, 0.9),
+      inset 0 -5px 6px rgba(138, 69, 33, 0.22),
+      0 1px 0 #f0ddcc,
+      0 2px 0 #e4cbb4,
+      0 3px 0 #d2b08f,
+      0 4px 0 #c4976e,
+      0 5px 0 #b4835c;
   }
   .selo::after {
     content: "";
