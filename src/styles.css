@@ -18,128 +18,161 @@
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
+/* Shared light source: upper left. Elevation stays independent of spacing. */
+:root {
+  --depth-edge: rgba(138, 69, 33, 0.18);
+  --depth-highlight: inset 0 1px 0 #fff, inset 1px 0 0 rgba(255, 255, 255, 0.65);
+  --depth-control: var(--depth-highlight), inset 0 -1px 0 rgba(138, 69, 33, 0.12), 0 2px 0 #d8bfa5, 0 3px 0 #c5a588, 0 6px 10px -4px rgba(66, 39, 21, 0.28);
+  --depth-card: var(--depth-highlight), inset 0 -1px 0 rgba(138, 69, 33, 0.12), 0 1px 0 #e4d3bf, 0 3px 0 #ddc7ae, 0 5px 0 #cdb194, 0 7px 6px -3px rgba(66, 39, 21, 0.22), 0 18px 26px -12px rgba(66, 39, 21, 0.3);
+  --depth-panel: var(--depth-highlight), 0 2px 0 #e4d3bf, 0 5px 0 #d7bea4, 0 8px 0 #c3a182, 0 12px 10px -5px rgba(66, 39, 21, 0.22), 0 26px 42px -18px rgba(66, 39, 21, 0.35);
+  --depth-inset: inset 0 2px 3px rgba(66, 39, 21, 0.18), inset 1px 1px 6px rgba(66, 39, 21, 0.08), 0 1px 0 #fff;
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
     color: var(--color-ink);
-    background: #f4e6d6;
+    background: var(--color-cream);
     -webkit-font-smoothing: antialiased;
   }
   body {
     text-wrap: pretty;
-    background:
-      radial-gradient(900px 420px at 0% -10%, rgba(255, 255, 255, 0.85), transparent 55%),
-      linear-gradient(180deg, #fffaf4 0%, #f6ebdf 42%, #efe0d0 100%);
+    background: linear-gradient(135deg, #fffaf4, #f5ece1);
     min-height: 100vh;
   }
   h1, h2, h3 {
     font-family: var(--font-serif);
     text-wrap: balance;
   }
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
-  input:not([type="checkbox"]):not([type="radio"]),
-  select,
-  textarea {
-    background-color: #fffdfb;
-    background-image: linear-gradient(180deg, rgba(42, 26, 16, 0.07), rgba(255, 255, 255, 0) 14px);
-    box-shadow:
-      inset 0 2px 4px rgba(42, 26, 16, 0.12),
-      inset 0 1px 0 rgba(42, 26, 16, 0.05);
-    border-color: #e0cdb8;
-  }
-  input:not([type="checkbox"]):not([type="radio"]):focus,
-  select:focus,
-  textarea:focus {
-    outline: 2px solid rgba(180, 99, 58, 0.45);
-    outline-offset: 1px;
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--color-copper-deep);
+    outline-offset: 3px;
   }
 }
 
 @layer components {
-  button.rounded-lg,
-  button.rounded-full,
-  button.rounded-2xl,
-  a.acao {
-    border: 1px solid rgba(90, 48, 24, 0.28);
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 46%, rgba(42, 22, 10, 0.14));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.72),
-      0 3px 0 rgba(62, 32, 14, 0.38),
-      0 7px 12px rgba(42, 26, 16, 0.14);
-    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
+  /* Recessed controls, rather than floating form fields. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]),
+  select, textarea {
+    background-image: linear-gradient(180deg, rgba(138, 69, 33, 0.08), transparent 16px);
+    box-shadow: var(--depth-inset);
+    border-color: #ddcbb8;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
   }
-  button.rounded-lg:hover:not(:disabled),
-  button.rounded-full:hover:not(:disabled),
-  button.rounded-2xl:hover:not(:disabled),
-  a.acao:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.8),
-      0 4px 0 rgba(62, 32, 14, 0.38),
-      0 10px 16px rgba(42, 26, 16, 0.16);
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--color-copper-deep);
+    outline-offset: 2px;
+    border-color: var(--color-copper);
   }
-  button.rounded-lg:active:not(:disabled),
-  button.rounded-full:active:not(:disabled),
-  button.rounded-2xl:active:not(:disabled),
-  a.acao:active {
-    transform: translateY(3px);
-    box-shadow:
-      inset 0 2px 4px rgba(42, 22, 10, 0.32),
-      0 0 0 rgba(62, 32, 14, 0);
+  input:disabled, select:disabled, textarea:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
   }
-  button:disabled {
+  :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+    accent-color: var(--color-copper);
+  }
+
+  :is(button.rounded-lg, button.rounded-xl, button.rounded-full, button.rounded-2xl, a.acao) {
+    border: 1px solid var(--depth-edge);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 55%, rgba(66, 39, 21, 0.04));
+    box-shadow: var(--depth-control);
+    transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  }
+  :is(button, a.acao).bg-copper {
+    border-color: rgba(107, 49, 22, 0.38);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 50%, rgba(66, 25, 8, 0.1));
+    box-shadow: inset 0 1px 0 rgba(255, 235, 219, 0.65), inset 1px 0 0 rgba(255, 235, 219, 0.25), inset 0 -1px 0 rgba(84, 34, 12, 0.25), 0 2px 0 #904821, 0 4px 0 #713719, 0 8px 12px -4px rgba(110, 51, 23, 0.38);
+  }
+  button[data-variant="ghost"] {
+    border-color: transparent;
+    background-image: none;
+    box-shadow: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :is(button.rounded-lg, button.rounded-xl, button.rounded-full, button.rounded-2xl, a.acao):hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--depth-control), 0 10px 14px -7px rgba(66, 39, 21, 0.3);
+    }
+    :is(button, a.acao).bg-copper:hover:not(:disabled) {
+      box-shadow: inset 0 1px 0 rgba(255, 235, 219, 0.65), 0 3px 0 #904821, 0 5px 0 #713719, 0 11px 16px -5px rgba(110, 51, 23, 0.4);
+    }
+    button[data-variant="ghost"]:hover:not(:disabled) {
+      transform: none;
+      box-shadow: inset 0 1px 2px rgba(66, 39, 21, 0.08);
+    }
+  }
+  :is(button.rounded-lg, button.rounded-xl, button.rounded-full, button.rounded-2xl, a.acao):active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: var(--depth-inset);
+  }
+  :is(button.rounded-lg, button.rounded-xl, button.rounded-full, button.rounded-2xl):disabled {
     transform: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background-image: none;
+    box-shadow: none;
   }
-  section.rounded-2xl,
-  li.rounded-2xl {
-    background-image: linear-gradient(165deg, #fffdf9 0%, #f7efe6 58%, #f0e2d2 100%);
-    border-color: #e4d0bc;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 rgba(120, 78, 48, 0.08),
-      0 1px 0 rgba(255, 255, 255, 0.7),
-      0 5px 0 rgba(168, 128, 92, 0.22),
-      0 14px 22px -16px rgba(42, 26, 16, 0.55);
+
+  .cartao, section.rounded-2xl, li.rounded-2xl {
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(255, 252, 248, 0.3) 50%, rgba(214, 183, 149, 0.25));
+    border-color: #e4d4c2;
+    box-shadow: var(--depth-card);
   }
-  a.rounded-lg[aria-current="page"] {
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.8),
-      0 2px 0 rgba(138, 69, 33, 0.22),
-      0 4px 8px rgba(42, 26, 16, 0.08);
-  }
-  .selo {
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      0 2px 0 rgba(138, 69, 33, 0.28),
-      0 5px 8px rgba(42, 26, 16, 0.14);
-  }
-  .coluna {
-    background: linear-gradient(180deg, #fffaf4 0%, #f3e6d6 100%);
-    box-shadow:
-      inset -1px 0 0 rgba(255, 255, 255, 0.8),
-      6px 0 16px rgba(42, 26, 16, 0.06);
-  }
-  .barra {
-    background: linear-gradient(180deg, #fffdf9, #f3e6d6);
-    box-shadow:
-      inset 0 1px 0 #fff,
-      0 -4px 0 rgba(168, 128, 92, 0.22),
-      0 -12px 20px rgba(42, 26, 16, 0.08);
+  .cartao .cartao {
+    box-shadow: var(--depth-control);
   }
   .painel {
     padding: 1.75rem 1.5rem;
     border: 1px solid #e4d0bc;
     border-radius: 1.25rem;
-    background: linear-gradient(165deg, #fffdf9 0%, #f6eee4 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      0 6px 0 rgba(168, 128, 92, 0.22),
-      0 18px 28px -18px rgba(42, 26, 16, 0.5);
+    background: linear-gradient(155deg, #fffdf9, #f8f1e8);
+    box-shadow: var(--depth-panel);
+  }
+  .consultorio {
+    background: radial-gradient(ellipse at 15% 0%, #fffdf9, transparent 65%), #f8f2ea;
+  }
+  .coluna {
+    position: relative;
+    background: linear-gradient(110deg, #fffaf4, #f3e8da);
+    box-shadow: inset -1px 0 0 #fff, inset -4px 0 6px rgba(138, 69, 33, 0.06), 3px 0 0 rgba(205, 177, 148, 0.45), 10px 0 22px -10px rgba(66, 39, 21, 0.24);
+  }
+  .nav-item {
+    position: relative;
+    transition: background-color 150ms ease, box-shadow 150ms ease;
+  }
+  .nav-item[aria-current="page"] {
+    background-color: var(--color-copper-soft);
+    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.45), transparent);
+    box-shadow: var(--depth-control), inset 3px 0 0 var(--color-copper);
+  }
+  .icone-nav {
+    /* Preserve the sculpted SVG artwork and its single, shared light source. */
+    overflow: visible;
+  }
+  .nav-item:not([aria-current="page"]) .icone-nav { opacity: 0.9; }
+  .selo {
+    position: relative;
+    isolation: isolate;
+    background-image: linear-gradient(145deg, #fffefd 25%, #efdfce);
+    box-shadow: inset 0 2px 3px #fff, inset 2px 0 4px rgba(255, 255, 255, 0.9), inset 0 -4px 5px rgba(138, 69, 33, 0.2), 0 1px 0 #e8d1b6, 0 3px 0 #cda782, 0 5px 0 #a97b53, 0 9px 8px -4px rgba(66, 39, 21, 0.3), 0 15px 22px -8px rgba(66, 39, 21, 0.32);
+  }
+  .selo::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(180, 99, 58, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.95);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .barra {
+    background: linear-gradient(180deg, #fffdf9, #f5ebdf);
+    box-shadow: inset 0 1px 0 #fff, 0 -2px 0 #ddc7ae, 0 -8px 20px -8px rgba(66, 39, 21, 0.24);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .barra .nav-item[aria-current="page"] {
+    box-shadow: inset 0 2px 0 var(--color-copper), inset 0 3px 0 rgba(255, 255, 255, 0.8);
   }
 }
 
@@ -176,6 +209,8 @@
   *::after {
     box-shadow: none !important;
     text-shadow: none !important;
+    filter: none !important;
+    background-image: none !important;
   }
 }
 
@@ -184,5 +219,10 @@
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(button, a.acao) { transform: none !important; }
 }

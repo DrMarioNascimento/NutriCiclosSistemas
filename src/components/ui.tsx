@@ -11,7 +11,7 @@ export function cx(...parts: Array<string | false | null | undefined>) {
 }
 
 const field =
-  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-base text-ink outline-none focus:border-copper";
+  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-base text-ink focus:border-copper";
 
 export function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -46,6 +46,7 @@ export function Button({
   return (
     <button
       {...props}
+      data-variant={variant}
       className={cx(
         "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-50",
         look,
@@ -56,7 +57,7 @@ export function Button({
 }
 
 export function Cartao({ children, className }: { children: ReactNode; className?: string }) {
-  return <section className={cx("rounded-2xl border border-line bg-cream p-5", className)}>{children}</section>;
+  return <section className={cx("cartao rounded-2xl border border-line bg-cream p-5", className)}>{children}</section>;
 }
 
 export function Erro({ children }: { children: ReactNode }) {

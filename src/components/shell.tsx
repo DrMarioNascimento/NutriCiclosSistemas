@@ -11,12 +11,12 @@ import { cx } from "./ui";
 function Vidro({ children }: { children: (id: string) => ReactNode }) {
   const id = useId().replace(/:/g, "");
   return (
-    <svg viewBox="0 0 32 32" className="size-7 shrink-0" aria-hidden>
+    <svg viewBox="0 0 32 32" className="icone-nav size-7 shrink-0" aria-hidden>
       <defs>
         <linearGradient id={`${id}-c`} x1="8" y1="3" x2="24" y2="30" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#fff4ea" stopOpacity="0.95" />
-          <stop offset="0.38" stopColor="#e7a67c" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#8a4521" stopOpacity="0.82" />
+          <stop offset="0.38" stopColor="#d58b5c" stopOpacity="0.85" />
+          <stop offset="1" stopColor="#8a4521" stopOpacity="0.95" />
         </linearGradient>
         <linearGradient id={`${id}-b`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#ffffff" stopOpacity="0.9" />
@@ -24,7 +24,7 @@ function Vidro({ children }: { children: (id: string) => ReactNode }) {
           <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
         <filter id={`${id}-s`} x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow dx="0" dy="1.4" stdDeviation="0.7" floodColor="#6a3418" floodOpacity="0.38" />
+          <feDropShadow dx="0" dy="1.8" stdDeviation="0.65" floodColor="#6a3418" floodOpacity="0.42" />
         </filter>
       </defs>
       <g filter={`url(#${id}-s)`}>{children(id)}</g>
@@ -174,7 +174,7 @@ function ItemNav({
       to={to}
       aria-current={ativo ? "page" : undefined}
       className={cx(
-        "flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-sm font-medium",
+        "nav-item flex min-h-11 items-center gap-2.5 rounded-lg px-2 text-sm font-medium",
         ativo ? "bg-copper-soft text-copper-deep" : "text-ink-2 hover:bg-sand",
       )}
     >
@@ -233,7 +233,7 @@ export function Shell({ children }: { children: ReactNode }) {
   if (!user) return <Entrada />;
 
   return (
-      <div className="min-h-screen bg-paper text-ink md:grid md:grid-cols-[19rem_1fr]">
+      <div className="consultorio min-h-screen text-ink md:grid md:grid-cols-[19rem_1fr]">
         <aside className="coluna no-print hidden border-r border-line md:flex md:flex-col md:px-5 md:py-6">
           <Marca nome={marca?.nome} linha={marca?.slogan || "Clínica de nutrição"} logo={marca?.logo} inicio />
           <nav className="mt-8 flex flex-col gap-1">
@@ -261,8 +261,9 @@ export function Shell({ children }: { children: ReactNode }) {
             <Link
               key={l.to}
               to={l.to}
+              aria-current={ativo(l.to) ? "page" : undefined}
               className={cx(
-                "flex min-h-16 flex-col items-center justify-center gap-1 text-xs",
+                "nav-item flex min-h-16 flex-col items-center justify-center gap-1 text-xs",
                 ativo(l.to) ? "text-copper-deep" : "text-muted",
               )}
             >

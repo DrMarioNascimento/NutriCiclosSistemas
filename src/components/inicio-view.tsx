@@ -91,7 +91,7 @@ export function InicioView() {
               to="/pacientes/$pacienteId"
               params={{ pacienteId: String(destaque.id) }}
               search={{ aba: proximo.aba }}
-              className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-copper px-4 text-sm font-semibold text-paper"
+              className="acao mt-4 inline-flex min-h-11 items-center rounded-lg bg-copper px-4 text-sm font-semibold text-paper"
             >
               Abrir prontuário
             </Link>
