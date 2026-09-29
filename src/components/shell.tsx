@@ -18,19 +18,19 @@ const links = [
 function Marca({ nome = "NutriCiclos", linha = "Clínica de nutrição", logo = "", inicio = false }: { nome?: string; linha?: string; logo?: string; inicio?: boolean }) {
   const src = useLogoEnquadrado(srcLogo(logo));
   const corpo = (
-    <span className="inline-flex max-w-full flex-col items-center px-3 py-2">
+    <span className="flex w-full flex-col px-1 pt-1 pb-2">
       <span className="flex items-center gap-3">
         <span className="selo grid size-20 shrink-0 place-items-center overflow-hidden rounded-full bg-[#fffdfb]">
           <img src={src} alt="" className="size-[88%] object-contain object-center" />
         </span>
         <span className="font-serif text-lg leading-none text-ink">{nome}</span>
       </span>
-      <span className="mt-2 block whitespace-nowrap text-center text-[11.5px] leading-none tracking-wide text-muted">{linha}</span>
+      <span className="mt-4 block w-full text-center text-[11.5px] leading-none tracking-wide text-muted">{linha}</span>
     </span>
   );
   if (!inicio) return corpo;
   return (
-    <Link to="/" aria-label="Ir para a primeira página" className="inline-flex max-w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-copper">
+    <Link to="/" aria-label="Ir para a primeira página" className="flex w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-copper">
       {corpo}
     </Link>
   );
