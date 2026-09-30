@@ -1,24 +1,33 @@
 NutriCiclos
-Copyright (c) 2026 Mario César Nascimento e Osana
+Copyright (c) 2026 Mario César Nascimento e Osana Melo
 
 Todos os direitos reservados.
 
-Este software, o manual e os demais arquivos deste repositório são de titularidade
-de Mario César Nascimento e Osana.
+Este software, o manual, as marcas e os demais arquivos deste repositório são de
+titularidade de Mario César Nascimento e Osana Melo, da clínica NutriCiclos.
+
+O sistema em produção roda no Netlify, com o banco de pacientes no Neon.
+Este repositório guarda só o código. Não guarda prontuário, avaliação, dieta,
+exame, agenda nem qualquer dado de paciente.
 
 É proibido, sem autorização prévia e por escrito dos titulares:
 
 - copiar o sistema, no todo ou em parte;
 - modificar, adaptar ou criar obras derivadas;
 - distribuir, publicar, sublicenciar ou vender;
-- usar em outra clínica ou por terceiros.
+- hospedar, espelhar ou republicar o app;
+- usar em outra clínica ou por terceiros;
+- acessar, copiar ou tratar dados de pacientes fora do uso autorizado da clínica.
 
 O uso permitido é o da clínica NutriCiclos, pelos titulares e por quem eles
-autorizarem.
+autorizarem, no app publicado e no banco ligado a ele.
 
-O repositório público permite ver o código. Ver não é permissão para copiar
-nem para usar.
+O repositório público permite ver o código. Ver não é permissão para copiar,
+hospedar nem usar.
 
-Nenhuma marca, nome ou emblema deste projeto pode ser usado sem autorização.
+Nenhuma marca, nome, slogan ou emblema deste projeto pode ser usado sem autorização.
 
-Dúvidas e pedidos de autorização: pelos titulares, Mario César Nascimento e Osana.
+Dúvidas e pedidos de autorização: Mario César Nascimento e Osana Melo.
+Clínica NutriCiclos · Florianópolis/SC
+contato@nutriciclos.com.br
+https://nutriciclos.com.br
