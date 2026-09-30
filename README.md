@@ -16,8 +16,8 @@ O sistema está no ar.
 
 | Lugar | Função | Endereço |
 |---|---|---|
-| Este repositório | Cópia do código. Não guarda pacientes. | https://github.com/DrMarioNascimento/NutriCiclosSistemas |
-| Repositório da clínica | Código em produção (Osana Melo). | https://github.com/osanilda-cell/NutriCiclosSistemas |
+| Este repositório | Código em produção. Não guarda pacientes. | https://github.com/osanilda-cell/NutriCiclosSistemas |
+| Cópia de trabalho | Cópia do código. Não guarda pacientes. | https://github.com/DrMarioNascimento/NutriCiclosSistemas |
 | Netlify | App publicado, em uso. | O endereço está no painel: https://app.netlify.com |
 | Neon | Banco dos pacientes na internet, ligado ao site e em uso. | https://neon.tech |
 | Site da clínica | Página pública da NutriCiclos. | https://nutriciclos.com.br |
