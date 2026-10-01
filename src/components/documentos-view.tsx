@@ -4,6 +4,8 @@ import { emitirDocumento, excluirDocumento, salvarDocumento } from "@/lib/clinic
 import { fmtCpf, fmtData, fmtNum } from "@/lib/clinic/calc";
 import type { Documento, Prontuario } from "@/lib/clinic/types";
 import { FolhaPapel } from "./folha-papel";
+import { QrComprovante } from "./qr-comprovante";
+import { eComprovante, eViaLeitura } from "@/lib/clinic/comprovantes";
 import { Button, Campo, Cartao, Erro, Input, Select, Textarea } from "./ui";
 
 const ROTULOS: Record<CampoModelo, string> = {
@@ -367,6 +369,13 @@ function FormDocumento({
           titulo={titulo}
           subtitulo={`${prontuario.paciente.nome}${prontuario.paciente.cpf ? ` · CPF ${fmtCpf(prontuario.paciente.cpf)}` : ""} · ${fmtData(data)}`}
           onFechar={() => setVer(false)}
+          rodape={
+            emitido && registro?.verificacaoToken && eComprovante(registro.tipo) ? (
+              <QrComprovante token={registro.verificacaoToken} />
+            ) : emitido && eViaLeitura(registro.tipo) ? (
+              <p className="mt-8 border-t border-line pt-4 text-xs tracking-wide text-muted">Via do paciente</p>
+            ) : null
+          }
         >
           {texto.split("\n").map((linha, i) => (
             <p key={i} className={linha.trim() ? "mt-3 text-sm text-ink" : "mt-3"}>

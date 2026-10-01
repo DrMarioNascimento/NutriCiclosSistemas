@@ -296,6 +296,7 @@ export type Documento = {
   textoLivre: string;
   texto: string;
   emitidoEm: string | null;
+  verificacaoToken: string;
 };
 
 export type ReferenciaExame = {

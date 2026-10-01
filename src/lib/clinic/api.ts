@@ -804,6 +804,7 @@ async function documentosDe(sql: Sql, userId: string, pacienteId: number): Promi
     textoLivre: txt(r.texto_livre),
     texto: txt(r.texto),
     emitidoEm: r.emitido_em ? String(r.emitido_em) : null,
+    verificacaoToken: txt(r.verificacao_token),
   }));
 }
 
@@ -1412,6 +1413,33 @@ export const confirmarPlano = createServerFn({ method: "POST" })
     return planoDoToken(data.token, { nascimento: data.nascimento, cpf3: data.cpf3, senha: data.senha });
   });
 
+export const lerVerificacao = createServerFn({ method: "GET" })
+  .validator(z.object({ token: z.string().trim().min(16).max(80) }))
+  .handler(async ({ data }) => {
+    const sql = await getSql();
+    const rows = await sql<Record<string, unknown>>`
+      select d.titulo, d.tipo, d.data, d.situacao, d.anulado_em, d.emitido_em,
+        c.nome, c.nutricionista, c.crn, c.cidade
+      from documentos d
+      join clinica c on c.user_id = d.user_id
+      where d.verificacao_token = ${data.token}
+      limit 1
+    `;
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      titulo: txt(r.titulo),
+      tipo: txt(r.tipo),
+      data: dia(r.data) ?? "",
+      situacao: r.anulado_em ? "Anulado" : txt(r.situacao),
+      emitidoEm: r.emitido_em ? String(r.emitido_em) : null,
+      clinica: txt(r.nome),
+      nutricionista: txt(r.nutricionista),
+      crn: txt(r.crn),
+      cidade: txt(r.cidade),
+    };
+  });
+
 export const TIPOS_RELATO = [
   "Recordatório 24 horas",
   "Dia alimentar habitual",
@@ -1623,7 +1651,19 @@ export const emitirDocumento = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const rows = await sql`
-      update documentos set situacao = 'Emitido', emitido_em = now(), atualizado_em = now()
+      update documentos set
+        situacao = 'Emitido',
+        emitido_em = now(),
+        atualizado_em = now(),
+        verificacao_token = case
+          when tipo in (
+            'declaracao_comparecimento',
+            'declaracao_comparecimento_acompanhante',
+            'atestado',
+            'declaracao_acompanhamento'
+          ) and coalesce(verificacao_token, '') = '' then ${tokenAgenda()}
+          else verificacao_token
+        end
       where id = ${data.id} and user_id = ${context.userId} and situacao = 'Rascunho'
       returning id
     `;

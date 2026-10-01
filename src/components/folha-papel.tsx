@@ -114,6 +114,7 @@ export function FolhaPapel({
   children,
   onFechar,
   acoes,
+  rodape,
 }: {
   clinica: Clinica;
   titulo: string;
@@ -121,6 +122,7 @@ export function FolhaPapel({
   children: ReactNode;
   onFechar: () => void;
   acoes?: ReactNode;
+  rodape?: ReactNode;
 }) {
   return (
     <div className="fixed inset-0 z-30 overflow-auto bg-paper">
@@ -141,6 +143,7 @@ export function FolhaPapel({
         <p className="mt-16 text-sm text-ink">{clinica.nutricionista}</p>
         <p className="text-sm text-ink-2">{clinica.crn}</p>
         <p className="text-sm text-muted">{clinica.cidade}</p>
+        {rodape}
       </article>
     </div>
   );
