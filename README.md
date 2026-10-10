@@ -36,7 +36,7 @@ npm test
 npm run check:auth
 ```
 
-`npm run build` também executa `npm run db:migrate`. Quando `DATABASE_URL` está presente, a compilação pode aplicar migrações ao banco apontado por essa variável. Use um banco de desenvolvimento/homologação para validar alterações e confira backup e destino antes de publicar. Esta revisão documental não executou migrações nem modificou dados.
+`npm run build` também executa `npm run db:migrate`. Quando `DATABASE_URL` está presente, a compilação pode aplicar migrações ao banco apontado por essa variável. Use um banco de desenvolvimento/homologação para validar alterações e confira backup e destino antes de publicar. Esta revisão altera apenas documentação e não inclui mudanças SQL. O fluxo de publicação configurado no provedor pode executar a compilação e o migrador acima, inclusive em previews; confira a separação dos ambientes e do banco.
 
 ## Operação e manutenção
 
