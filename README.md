@@ -1,64 +1,52 @@
-# NutriCiclos
+# NutriCiclos — sistema
 
-Consultório de nutrição. Prontuário, avaliação, dieta, cardápio, exames, documentos e agenda.
+Nutrição em cada ciclo da vida. Documentação revisada em 10 de outubro de 2026.
 
-Nutrição em cada ciclo da vida.
+Sistema de consultório de nutrição com prontuário, avaliação, dieta, cardápio, exames, documentos e agenda. Este repositório contém código e recursos da aplicação; não é o banco operacional da clínica.
 
-Versão 5.0 · 2026.
+## Onde cada componente fica
 
-## Para quem é
+| Componente | Responsabilidade |
+|---|---|
+| [Código do sistema](https://github.com/DrMarioNascimento/NutriCiclosSistemas) | Aplicação e ferramentas de desenvolvimento. |
+| [Manual](https://github.com/DrMarioNascimento/NutriCiclos-manual) | PDF com orientação de uso. |
+| Aplicação publicada | Ambiente de uso da clínica; confirme o endereço com os titulares. |
+| Banco configurado no servidor | Dados operacionais; no código auditado, `DATABASE_URL` seleciona PostgreSQL/Neon. |
+| [Site da clínica](https://nutriciclos.com.br) | Comunicação pública da NutriCiclos. |
 
-Para a clínica usar no navegador. Não é uma planilha e não abre com dois cliques num arquivo.
+A presença do código no GitHub não comprova a disponibilidade nem a configuração de uma instalação em produção. O ambiente local não deve ser usado como substituto do banco da clínica. O código contém fallback PGLite quando `DATABASE_URL` não está configurada; esse fallback não comprova persistência, backup ou recuperação em produção.
 
-## Onde cada coisa fica
+## Desenvolvimento
 
-O sistema está no ar.
+O projeto usa React, TypeScript, TanStack Start, Vite e PostgreSQL. As instruções específicas estão em [AGENTS.md](AGENTS.md).
 
-| Lugar | Função | Endereço |
-|---|---|---|
-| Este repositório | Guarda o código. Não guarda pacientes. | https://github.com/osanilda-cell/NutriCiclosSistemas |
-| Netlify | App publicado, em uso. | O endereço está no painel: https://app.netlify.com |
-| Neon | Banco dos pacientes na internet, ligado ao site e em uso. | https://neon.tech |
-| Site da clínica | Página pública da NutriCiclos. | https://nutriciclos.com.br |
-| Computador da clínica | Cópia local opcional, só enquanto o servidor de desenvolvimento estiver aberto. | http://localhost:8080 |
-
-Pacientes, avaliações, dietas, exames e agenda ficam no Neon. O GitHub não é o banco.
-
-O manual completo, com as telas e o passo a passo, está em PDF:
-
-https://github.com/DrMarioNascimento/NutriCiclos-manual/blob/main/Manual-NutriCiclos.pdf
-
-## Abrir no computador
-
-Só é necessário para desenvolvimento. O uso do consultório é pelo app no Netlify.
-
-Na pasta de dentro, aquela em que aparecem `package.json` e `src`:
-
-```powershell
-cd C:\Users\mario\Documents\NutriCiclosSistemas-main\NutriCiclosSistemas-main
-$env:VITE_AUTH_ENABLED="false"
-.\node_modules\.bin\vite.cmd dev --host 0.0.0.0 --port 8080
+```text
+npm ci
+npm run dev
 ```
 
-Abra http://localhost:8080 e deixe a janela azul aberta.
+O comando de desenvolvimento usa `scripts/with-app-env.mjs`; não o substitua por uma chamada direta ao Vite. A configuração de autenticação e banco deve corresponder ao ambiente. Não desligue autenticação em uma instalação que trate dados reais.
 
-Antes de fechar a cópia local, exporte um backup em Sistema → Backup. No computador, sem o Neon, os pacientes ficam na memória e somem quando o programa para.
+Verificações disponíveis:
 
-A primeira instalação pede o Node.js (https://nodejs.org, versão LTS), o ZIP deste repositório extraído e, no Windows, a permissão para o npm:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```text
+npm run typecheck
+npm run lint
+npm test
+npm run check:auth
 ```
 
-## Licença
+`npm run build` também executa `npm run db:migrate`. Quando `DATABASE_URL` está presente, a compilação pode aplicar migrações ao banco apontado por essa variável. Use um banco de desenvolvimento/homologação para validar alterações e confira backup e destino antes de publicar. Esta revisão documental não executou migrações nem modificou dados.
 
-Todos os direitos reservados. O texto completo está no arquivo `LICENSE`.
+## Operação e manutenção
 
-Copiar, modificar ou distribuir este sistema exige autorização prévia por escrito dos titulares.
+Antes de mudar uma instalação em uso, confirme destino de publicação, autenticação, autorização, banco configurado, exportação e restauração de backup. A existência de rotas de login e backup no código não comprova que todos esses controles estejam configurados em produção.
 
-## Titulares
+Mudanças devem passar por branch e PR de revisão; não publicar diretamente em `main` sem autorização dos titulares.
 
-Mario César Nascimento  
-Osana Melo  
-Clínica NutriCiclos · Florianópolis/SC  
-contato@nutriciclos.com.br
+## Titulares e licença
+
+Mario César Nascimento e Osana Melo · Clínica NutriCiclos · Florianópolis/SC.  
+Contato: contato@nutriciclos.com.br.
+
+Todos os direitos reservados. Consulte [LICENSE](LICENSE). Esta revisão preserva as permissões e restrições existentes; não concede autorização comercial adicional.
