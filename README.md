@@ -1,6 +1,10 @@
 # NutriCiclos — sistema
 
-Nutrição em cada ciclo da vida. Documentação revisada em 10 de outubro de 2026.
+## Situação atual — 19 de outubro de 2026
+
+O sistema e o manual continuam em repositórios separados. Os comandos de desenvolvimento e verificação abaixo correspondem ao `package.json` atual. A compilação inclui `db:migrate`; por isso, a publicação depende da configuração do banco de destino. O endereço de hospedagem é informação operacional e deve ser confirmado no provedor. Esta revisão é documental e não executa migrações nem acessa dados da clínica.
+
+Nutrição em cada ciclo da vida. Documentação revisada em 19 de outubro de 2026.
 
 Sistema de consultório de nutrição com prontuário, avaliação, dieta, cardápio, exames, documentos e agenda. Este repositório contém código e recursos da aplicação; não é o banco operacional da clínica.
 

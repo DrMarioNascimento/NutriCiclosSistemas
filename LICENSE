@@ -6,9 +6,9 @@ Todos os direitos reservados.
 Este software, o manual, as marcas e os demais arquivos deste repositório são de
 titularidade de Mario César Nascimento e Osana Melo, da clínica NutriCiclos.
 
-O sistema em produção roda no Netlify, com o banco de pacientes no Neon.
-Este repositório guarda só o código. Não guarda prontuário, avaliação, dieta,
-exame, agenda nem qualquer dado de paciente.
+Este repositório contém o código do sistema. A hospedagem e o banco operacional
+da clínica são configurados separadamente; seus endereços não constituem
+condições desta licença.
 
 É proibido, sem autorização prévia e por escrito dos titulares:
 
@@ -32,10 +32,8 @@ Clínica NutriCiclos · Florianópolis/SC
 contato@nutriciclos.com.br
 https://nutriciclos.com.br
 
----
+## Revisão documental — 19 de outubro de 2026
 
-## Nota editorial — 10 de outubro de 2026
+Este arquivo rege os componentes originais do sistema NutriCiclos. O manual possui repositório próprio. Endereços de hospedagem e configuração de banco são informações operacionais, verificadas no ambiente utilizado pela clínica.
 
-O arquivo trata dos componentes originais do sistema. A documentação técnica atualizada está no README; endereços de hospedagem são informações operacionais e não condições de licença.
-
-Esta nota registra a revisão da documentação. Não altera as cláusulas anteriores, os titulares, as permissões, as restrições nem as licenças próprias de terceiros.
+Esta revisão atualiza a identificação e o escopo documental. Preserva os titulares, as permissões e as restrições existentes. Não substitui nem restringe as licenças próprias de componentes de terceiros.
