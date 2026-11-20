@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { getPainel } from "@/lib/clinic/api";
+import { useCurrentUser } from "@/lib/auth/use-current-user";
 import { fmtData, saudacao, semAcento } from "@/lib/clinic/calc";
 import type { AgendaItem, Paciente, Painel } from "@/lib/clinic/types";
 import { srcLogo } from "./folha-papel";
@@ -38,6 +39,7 @@ function bate(p: Paciente, q: string) {
 
 export function InicioView() {
   const nav = useNavigate();
+  const user = useCurrentUser();
   const [painel, setPainel] = useState<Painel | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -70,6 +72,7 @@ export function InicioView() {
   const hoje = painel.agenda.filter((a) => a.dia === painel.hoje && !a.feito);
   const atrasados = painel.agenda.filter((a) => a.dia < painel.hoje && !a.feito);
   const aFrente = painel.agenda.filter((a) => a.dia > painel.hoje && !a.feito).slice(0, 3);
+  const primeiroNome = user?.displayName?.trim().split(/\s+/)[0];
 
   return (
     <div className="-mx-4 -mt-6 md:-mx-10 md:-mt-10">
@@ -85,9 +88,13 @@ export function InicioView() {
           <p className="mt-5 font-serif text-4xl tracking-wide text-[#8a4521] md:text-5xl">{painel.clinica.nome || "NutriCiclos"}</p>
           <p className="mt-2 text-[11px] tracking-[0.28em] text-ink-2">{painel.clinica.slogan || "CLÍNICA DE NUTRIÇÃO"}</p>
           <p className="mt-6 text-sm text-ink-2">
-            {saudacao()} · {painel.clinica.nutricionista}
-            {painel.clinica.crn ? ` · ${painel.clinica.crn}` : ""}
+            {saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""}!
           </p>
+          {painel.clinica.nutricionista ? (
+            <p className="mt-1 text-sm text-muted">
+              {painel.clinica.nutricionista}{painel.clinica.crn ? ` · ${painel.clinica.crn}` : ""}
+            </p>
+          ) : null}
           <label className="mt-8 w-full text-left">
             <span className="mb-1 block text-sm text-ink-2">Quem você atende agora?</span>
             <Input
