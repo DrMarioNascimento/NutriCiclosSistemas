@@ -71,11 +71,12 @@ export function Entrada() {
     <main className="grid min-h-screen place-items-center bg-paper px-6 py-16">
       <div className="painel w-full max-w-md">
         <Marca />
-        <h1 className="mt-8 font-serif text-4xl text-ink">O consultório, sem a planilha.</h1>
+        <h1 className="mt-8 font-serif text-4xl text-ink">Bem-vindo à NutriCiclos</h1>
+        <p className="mt-3 text-ink-2">Seu espaço para organizar o cuidado em cada consulta.</p>
         <p className="mt-3 text-ink-2">
           {tem === false
             ? "Crie o primeiro acesso da clínica. Quem entrar depois é incluído em Sistema."
-            : "Entre com o e-mail e a senha da clínica."}
+            : "Entre com seu e-mail e sua senha."}
         </p>
         <form className="mt-8 flex flex-col gap-3" onSubmit={(e) => void enviar(e)}>
           {tem === false ? (
