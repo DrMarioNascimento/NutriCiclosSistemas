@@ -19,3 +19,19 @@ test("preserva zero medido e distingue traços e ausência em totais parciais", 
     { composicaoMicro: { zinco: "Tr" as const } }, {}];
   assert.deepEqual(somarMicronutriente(itens, "zinco"), { total: 1.5, medidos: 2, tracos: 1, semDados: 1 });
 });
+
+test("IBGE preserva a composição da preparação e mantém sódio de adição separado", () => {
+  const ibge = Object.assign({}, ...[1, 2, 3, 4].map((parte) =>
+    JSON.parse(readFileSync(new URL(`../../data/ibge-micronutrientes-${parte}.json`, import.meta.url), "utf8")),
+  ));
+  assert.equal(Object.keys(ibge).length, 1971);
+  const milhoCozido = composicaoMicroPorPorcao(lerComposicaoMicro(ibge.P0004), 50);
+  const milhoRefogado = composicaoMicroPorPorcao(lerComposicaoMicro(ibge.P0007), 50);
+  assert.equal(milhoCozido.folato_dfe, 23);
+  assert.ok(Math.abs(Number(milhoCozido.sodio) - 122.482) < 1e-9);
+  assert.equal(milhoCozido.sodio_adicao, 122.5);
+  assert.equal(milhoRefogado.sodio, undefined);
+  assert.equal(milhoRefogado.sodio_adicao, 122.5);
+  assert.equal(milhoCozido.vitamina_d, undefined);
+  assert.equal(milhoCozido.vitamina_c, 3.1);
+});
