@@ -29,6 +29,11 @@ type Evento = {
   aba: Destino;
 };
 
+function detalheMicros(metas: Prontuario["avaliacoes"][number]["micronutrientes"]) {
+  const qtd = metas?.length ?? 0;
+  return qtd ? ` · ${qtd} ${qtd === 1 ? "micronutriente" : "micronutrientes"}` : "";
+}
+
 function eventosDe(prontuario: Prontuario): Evento[] {
   const lista: Evento[] = [];
   for (const a of prontuario.avaliacoes) {
@@ -39,7 +44,7 @@ function eventosDe(prontuario: Prontuario): Evento[] {
       filtro: "avaliacao",
       tipo: "Avaliação",
       titulo: `${fmtNum(a.peso, 1)} kg · IMC ${fmtNum(a.imc, 1)}`,
-      detalhe: a.diagnostico || a.equipamento || "Sem diagnóstico.",
+      detalhe: (a.diagnostico || a.equipamento || "Sem diagnóstico.") + detalheMicros(a.micronutrientes),
       aba: "avaliacao",
     });
   }
@@ -51,7 +56,7 @@ function eventosDe(prontuario: Prontuario): Evento[] {
       filtro: "dieta",
       tipo: "Dieta",
       titulo: d.nome,
-      detalhe: `${fmtNum(d.kcalMeta, 0)} kcal${d.indicacao ? ` · ${d.indicacao}` : ""}`,
+      detalhe: `${fmtNum(d.kcalMeta, 0)} kcal${d.indicacao ? ` · ${d.indicacao}` : ""}${detalheMicros(d.micronutrientes)}`,
       aba: "dieta",
     });
   }
@@ -64,7 +69,7 @@ function eventosDe(prontuario: Prontuario): Evento[] {
       filtro: "cardapio",
       tipo: "Cardápio",
       titulo: p.titulo,
-      detalhe: `${p.situacao} · ${fmtNum(p.kcalMeta, 0)} kcal · ${n} alimentos`,
+      detalhe: `${p.situacao} · ${fmtNum(p.kcalMeta, 0)} kcal · ${n} alimentos${detalheMicros(p.micronutrientes)}`,
       aba: "cardapio",
     });
   }

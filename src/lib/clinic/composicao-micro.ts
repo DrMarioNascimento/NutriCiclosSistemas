@@ -1,3 +1,5 @@
+import type { MetaMicronutriente } from "./types";
+
 export const FONTE_TACO = "TACO, NEPA/Unicamp, 4ª edição (2011)";
 export const FONTE_IBGE = "IBGE, POF 2008–2009";
 export const LINK_IBGE = "https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2008_2009/Tabelas_de_Composicao_Nutricional_dos_Alimentos_Consumidos_no_Brasil/";
@@ -89,4 +91,15 @@ export function somarMicronutriente(itens: readonly { composicaoMicro?: Composic
     }
   }
   return { total, medidos, tracos, semDados: itens.length - medidos - tracos };
+}
+
+export function lerMetasMicro(valor: unknown): MetaMicronutriente[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.slice(0, 30).flatMap((meta) => {
+    if (!meta || typeof meta !== "object") return [];
+    const { nome, unidade, meta: quantidade } = meta;
+    if (typeof nome !== "string" || !nome.trim() || !["mg", "µg", "g"].includes(unidade)) return [];
+    if (typeof quantidade !== "number" || !Number.isFinite(quantidade) || quantidade <= 0 || quantidade > 1000000) return [];
+    return [{ nome: nome.trim().slice(0, 80), unidade, meta: quantidade }];
+  });
 }

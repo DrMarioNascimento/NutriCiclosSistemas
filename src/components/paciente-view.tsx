@@ -28,6 +28,7 @@ import {
   sugerirKcal,
 } from "@/lib/clinic/calc";
 import type { AlimentoBusca, Avaliacao, Prescricao, Prontuario, Refeicao } from "@/lib/clinic/types";
+import { editarMetasMicro, MetasMicroEditor, ResumoMicronutrientes, validarMetasMicro } from "./micronutrientes-view";
 import { EvolucaoPainel } from "./evolucao-view";
 import { EntregaPlano } from "./entrega-view";
 import { ExamesPainel } from "./exames-view";
@@ -336,6 +337,7 @@ function FichaAvaliacao({ aval, objetivo }: { aval: Avaliacao; objetivo: string 
         Jejum {aval.jejum} · sem exercício 24 h {aval.semExercicio} · hidratação habitual {aval.hidratacao}
         {aval.equipamento ? ` · ${aval.equipamento}` : ""}
       </p>
+      <ResumoMicronutrientes metas={aval.micronutrientes} />
     </Cartao>
   );
 }
@@ -360,6 +362,7 @@ function FormAvaliacao({ prontuario, onSalvo }: { prontuario: Prontuario; onSalv
   const [kcal, setKcal] = useState("");
   const [gordura, setGordura] = useState("");
   const [massa, setMassa] = useState("");
+  const [micros, setMicros] = useState(() => editarMetasMicro(ultima?.micronutrientes));
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -428,6 +431,7 @@ function FormAvaliacao({ prontuario, onSalvo }: { prontuario: Prontuario; onSalv
           lactante,
           trimestre: gestante === "Sim" ? trimestre || "2" : "",
           kcalMeta: previa.meta,
+          micronutrientes: validarMetasMicro(micros),
           observacoes: obs,
           gorduraPct: gordura.trim() ? Number(gordura.replace(",", ".")) : null,
           massaMuscular: massa.trim() ? Number(massa.replace(",", ".")) : null,
@@ -516,6 +520,9 @@ function FormAvaliacao({ prontuario, onSalvo }: { prontuario: Prontuario; onSalv
             </p>
           </div>
         ) : null}
+        <div className="md:col-span-3">
+          <MetasMicroEditor metas={micros} onChange={setMicros} />
+        </div>
         <div className="md:col-span-3">
           <Erro>{erro}</Erro>
         </div>
@@ -778,7 +785,7 @@ function Editor({
   const [cho, setCho] = useState(String(plano.carbMeta));
   const [lip, setLip] = useState(String(plano.lipMeta));
   const [fibra, setFibra] = useState(plano.fibraMeta == null ? "" : String(plano.fibraMeta));
-  const [micros, setMicros] = useState((plano.micronutrientes ?? []).map((m) => ({ ...m, meta: String(m.meta) })));
+  const [micros, setMicros] = useState(() => editarMetasMicro(plano.micronutrientes));
   const [hidra, setHidra] = useState(plano.hidratacao);
   const [retorno, setRetorno] = useState(plano.retornoEm ?? "");
   const [refs, setRefs] = useState(plano.refeicoes);
@@ -798,7 +805,7 @@ function Editor({
     setCho(String(plano.carbMeta));
     setLip(String(plano.lipMeta));
     setFibra(plano.fibraMeta == null ? "" : String(plano.fibraMeta));
-    setMicros((plano.micronutrientes ?? []).map((m) => ({ ...m, meta: String(m.meta) })));
+    setMicros(editarMetasMicro(plano.micronutrientes));
     setHidra(plano.hidratacao);
     setRetorno(plano.retornoEm ?? "");
     setRefs(plano.refeicoes);
@@ -817,7 +824,6 @@ function Editor({
   async function guardar(): Promise<boolean> {
     setErro(null);
     try {
-      if (micros.some((m) => !m.nome.trim() || !Number.isFinite(Number(m.meta)) || Number(m.meta) <= 0)) throw new Error("Informe nome e meta positiva para cada micronutriente escolhido.");
       await salvarPlano({
         data: {
           id: plano.id,
@@ -827,7 +833,7 @@ function Editor({
           carbMeta: Number(cho),
           lipMeta: Number(lip),
           fibraMeta: fibra.trim() ? Number(fibra) : null,
-          micronutrientes: micros.map((m) => ({ nome: m.nome.trim(), unidade: m.unidade as "mg" | "µg" | "g", meta: Number(m.meta) })),
+          micronutrientes: validarMetasMicro(micros),
           hidratacao: hidra,
           retornoEm: retorno,
           refeicoes: refs.map((r) => ({ id: r.id, nome: r.nome, hora: r.hora, orientacao: r.orientacao })),
@@ -935,7 +941,7 @@ function Editor({
                   <Input type="number" min="0" step="any" value={m.meta} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, meta: e.target.value } : x))} />
                 </Campo>
                 <Campo label="Unidade">
-                  <Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value } : x))}>
+                  <Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value as typeof m.unidade } : x))}>
                     <option>mg</option><option>µg</option><option>g</option>
                   </Select>
                 </Campo>
@@ -1269,6 +1275,7 @@ function Folha({
         <p className="mt-6 text-sm tabular-nums text-ink-2">
           Calculado: {fmtNum(totais.kcal, 0)} kcal · PTN {fmtNum(totais.ptn, 1)} g · CHO {fmtNum(totais.cho, 1)} g · LIP {fmtNum(totais.lip, 1)} g · fibra {fmtNum(totais.fibra, 1)} g
         </p>
+        <ResumoMicronutrientes metas={plano.micronutrientes} itens={plano.refeicoes.flatMap((r) => r.itens)} />
         {plano.hidratacao ? <p className="mt-2 text-sm">Hidratação: {plano.hidratacao}</p> : null}
         <p className="mt-8 text-xs text-muted">
           Orientação alimentar de {c.nutricionista}, {c.crn}. Não substitui o acompanhamento.

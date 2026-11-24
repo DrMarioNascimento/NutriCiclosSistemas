@@ -1,3 +1,4 @@
+import { ResumoMicronutrientes } from "./micronutrientes-view";
 import { useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { arred, fmtData, fmtNum } from "@/lib/clinic/calc";
@@ -101,6 +102,19 @@ export function EvolucaoPainel({ prontuario }: { prontuario: Prontuario }) {
         </div>
       </Cartao>
       <Comparar crono={crono} limiteGordura={prontuario.clinica.variacaoBia} />
+      {avaliacoes.some((a) => a.micronutrientes?.length) ? (
+        <Cartao>
+          <h2 className="font-serif text-2xl">Metas de micronutrientes por avaliação</h2>
+          <div className="mt-3 divide-y divide-line">
+            {avaliacoes.filter((a) => a.micronutrientes?.length).map((a) => (
+              <details key={a.id} className="py-3" open={a.id === avaliacoes[0].id}>
+                <summary className="cursor-pointer text-sm font-medium">{fmtData(a.data)}</summary>
+                <ResumoMicronutrientes metas={a.micronutrientes} />
+              </details>
+            ))}
+          </div>
+        </Cartao>
+      ) : null}
     </div>
   );
 }

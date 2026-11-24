@@ -1,3 +1,4 @@
+import { ResumoMicronutrientes } from "./micronutrientes-view";
 import { useState } from "react";
 import { fmtCpf, fmtData, fmtNum } from "@/lib/clinic/calc";
 import type { Prontuario } from "@/lib/clinic/types";
@@ -118,6 +119,7 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
               Desde {fmtData(antiga.data)}, o peso foi de {fmtNum(antiga.peso, 1)} kg para {fmtNum(aval.peso, 1)} kg.
             </p>
           ) : null}
+          <ResumoMicronutrientes metas={aval.micronutrientes} />
           {aval.observacoes ? <p className="mt-1">{aval.observacoes}</p> : null}
         </section>
       ) : (
@@ -136,6 +138,7 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
               {r.nome}: {r.substituicoes}
             </p>
           ))}
+          <ResumoMicronutrientes metas={dieta.micronutrientes} />
           {dieta.observacoes ? <p className="mt-1">{dieta.observacoes}</p> : null}
         </section>
       ) : (
@@ -154,6 +157,7 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
               {ref.nome}: {ref.itens.map((i) => i.alimentoNome).join(", ") || "sem alimentos"}
             </p>
           ))}
+          <ResumoMicronutrientes metas={emitido.micronutrientes} itens={emitido.refeicoes.flatMap((ref) => ref.itens)} />
         </section>
       ) : (
         <p>Nenhum cardápio emitido. Rascunho não entra no dossiê como prescrição.</p>

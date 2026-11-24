@@ -2,6 +2,7 @@ import { useState } from "react";
 import { criarCardapio, excluirDieta, salvarDieta } from "@/lib/clinic/api";
 import { fmtData, fmtNum } from "@/lib/clinic/calc";
 import type { Dieta, Prontuario, RefeicaoDieta } from "@/lib/clinic/types";
+import { editarMetasMicro, MetasMicroEditor, validarMetasMicro } from "./micronutrientes-view";
 import { Button, Campo, Cartao, Erro, Input, Select, Textarea } from "./ui";
 
 function rascunho(prontuario: Prontuario): Omit<Dieta, "id"> & { id?: number } {
@@ -19,6 +20,7 @@ function rascunho(prontuario: Prontuario): Omit<Dieta, "id"> & { id?: number } {
     protMeta: aval?.protMeta ?? 0,
     carbMeta: aval?.carbMeta ?? 0,
     lipMeta: aval?.lipMeta ?? 0,
+    micronutrientes: aval?.micronutrientes ?? [],
     observacoes: "",
     refeicoes,
   };
@@ -91,6 +93,7 @@ function Editor({
   const [prot, setProt] = useState(base.protMeta ? String(base.protMeta) : "");
   const [carb, setCarb] = useState(base.carbMeta ? String(base.carbMeta) : "");
   const [lip, setLip] = useState(base.lipMeta ? String(base.lipMeta) : "");
+  const [micros, setMicros] = useState(() => editarMetasMicro(base.micronutrientes));
   const [obs, setObs] = useState(base.observacoes);
   const [refeicoes, setRefeicoes] = useState<RefeicaoDieta[]>(base.refeicoes);
   const [modeloId, setModeloId] = useState(modelos[0]?.id ?? 0);
@@ -119,6 +122,7 @@ function Editor({
       protMeta: protN,
       carbMeta: carbN,
       lipMeta: lipN,
+      micronutrientes: validarMetasMicro(micros),
       observacoes: obs,
       refeicoes: refeicoes.filter((r) => r.nome.trim()).map((r) => ({ nome: r.nome.trim(), hora: r.hora.trim(), substituicoes: r.substituicoes.trim() })),
     };
@@ -155,6 +159,7 @@ function Editor({
     setCarb(modelo.carbMeta ? String(modelo.carbMeta) : "");
     setLip(modelo.lipMeta ? String(modelo.lipMeta) : "");
     setObs(modelo.observacoes);
+    setMicros(editarMetasMicro(modelo.micronutrientes));
     setRefeicoes(modelo.refeicoes.map((r) => ({ ...r })));
     setOk(`Modelo “${modelo.nome}” copiado. Grave para ficar no prontuário.`);
   }
@@ -209,6 +214,7 @@ function Editor({
           {fmtNum((carbN * 4 * 100) / vet, 0)}%, lipídio {fmtNum((lipN * 9 * 100) / vet, 0)}%.
         </p>
       ) : null}
+      <MetasMicroEditor metas={micros} onChange={setMicros} />
       <h3 className="mt-6 font-serif text-xl">Refeições</h3>
       <div className="mt-3 flex flex-col gap-4">
         {refeicoes.map((r, i) => (
