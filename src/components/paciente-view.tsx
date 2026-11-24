@@ -606,7 +606,7 @@ function PainelCardapio({ prontuario, onMudou }: { prontuario: Prontuario; onMud
               Visualizar
             </Button>
           </div>
-          <Editor plano={plano} onMudou={onMudou} onNova={setSel} />
+          <Editor plano={plano} avaliacao={prontuario.avaliacoes[0]} onMudou={onMudou} onNova={setSel} onPrevia={() => setVer(true)} />
           {ver ? <Folha prontuario={prontuario} plano={plano} onFechar={() => setVer(false)} /> : null}
         </>
       ) : (
@@ -762,8 +762,12 @@ function Editor({
   plano,
   onMudou,
   onNova,
+  onPrevia,
+  avaliacao,
 }: {
   plano: Prescricao;
+  avaliacao?: Avaliacao;
+  onPrevia: () => void;
   onMudou: () => Promise<void>;
   onNova: (id: number) => void;
 }) {
@@ -772,6 +776,8 @@ function Editor({
   const [prot, setProt] = useState(String(plano.protMeta));
   const [cho, setCho] = useState(String(plano.carbMeta));
   const [lip, setLip] = useState(String(plano.lipMeta));
+  const [fibra, setFibra] = useState(plano.fibraMeta == null ? "" : String(plano.fibraMeta));
+  const [micros, setMicros] = useState((plano.micronutrientes ?? []).map((m) => ({ ...m, meta: String(m.meta) })));
   const [hidra, setHidra] = useState(plano.hidratacao);
   const [retorno, setRetorno] = useState(plano.retornoEm ?? "");
   const [refs, setRefs] = useState(plano.refeicoes);
@@ -788,6 +794,8 @@ function Editor({
     setProt(String(plano.protMeta));
     setCho(String(plano.carbMeta));
     setLip(String(plano.lipMeta));
+    setFibra(plano.fibraMeta == null ? "" : String(plano.fibraMeta));
+    setMicros((plano.micronutrientes ?? []).map((m) => ({ ...m, meta: String(m.meta) })));
     setHidra(plano.hidratacao);
     setRetorno(plano.retornoEm ?? "");
     setRefs(plano.refeicoes);
@@ -806,6 +814,7 @@ function Editor({
   async function guardar(): Promise<boolean> {
     setErro(null);
     try {
+      if (micros.some((m) => !m.nome.trim() || !Number.isFinite(Number(m.meta)) || Number(m.meta) <= 0)) throw new Error("Informe nome e meta positiva para cada micronutriente escolhido.");
       await salvarPlano({
         data: {
           id: plano.id,
@@ -814,6 +823,8 @@ function Editor({
           protMeta: Number(prot),
           carbMeta: Number(cho),
           lipMeta: Number(lip),
+          fibraMeta: fibra.trim() ? Number(fibra) : null,
+          micronutrientes: micros.map((m) => ({ nome: m.nome.trim(), unidade: m.unidade as "mg" | "µg" | "g", meta: Number(m.meta) })),
           hidratacao: hidra,
           retornoEm: retorno,
           refeicoes: refs.map((r) => ({ id: r.id, nome: r.nome, hora: r.hora, orientacao: r.orientacao })),
@@ -827,6 +838,7 @@ function Editor({
   }
 
   async function emitir() {
+    if (![kcal, prot, cho, lip, fibra].every((v) => v.trim() && Number.isFinite(Number(v)) && Number(v) > 0)) { setErro("Defina metas positivas para energia, proteínas, carboidratos, gorduras e fibras antes da emissão."); return; }
     setOcupado(true);
     setErro(null);
     try {
@@ -880,14 +892,28 @@ function Editor({
         <Campo label="Gordura (g)">
           <Input value={lip} disabled={!rascunho} onChange={(e) => setLip(e.target.value)} />
         </Campo>
+        <Campo label="Meta de fibras (g/dia)"><Input type="number" min="0" value={fibra} disabled={!rascunho} onChange={(e) => setFibra(e.target.value)} /></Campo>
       </div>
+      {avaliacao ? <p className="mt-3 text-sm text-ink-2">Referência da avaliação de {fmtData(avaliacao.data)}: energia sugerida {fmtNum(avaliacao.sugeridaKcal, 0)} kcal/dia; metas registradas: proteína {fmtNum(avaliacao.protMeta, 0)} g, carboidrato {fmtNum(avaliacao.carbMeta, 0)} g e gordura {fmtNum(avaliacao.lipMeta, 0)} g. Revise conforme a avaliação profissional. A referência para fibras e micronutrientes ainda deve ser definida.</p> : <p className="mt-3 text-sm text-ink-2">Sem avaliação disponível para sugerir valores. Cadastre uma avaliação e defina as metas.</p>}
       <div className="mt-4 grid gap-2">
         <Barra rotulo="Energia" valor={totais.kcal} meta={Number(kcal) || 0} unidade="kcal" />
         <Barra rotulo="Proteína" valor={totais.ptn} meta={Number(prot) || 0} unidade="g" />
         <Barra rotulo="Carboidrato" valor={totais.cho} meta={Number(cho) || 0} unidade="g" />
         <Barra rotulo="Gordura" valor={totais.lip} meta={Number(lip) || 0} unidade="g" />
       </div>
-      <p className="mt-2 text-sm text-muted">Fibra somada: {fmtNum(totais.fibra, 1)} g. Itens de exemplo para o cálculo — ajuste antes de emitir.</p>
+      <Barra rotulo="Fibras" valor={totais.fibra} meta={Number(fibra) || 0} unidade="g" />
+      <p className="mt-2 text-sm text-muted">Valores estimados para o cardápio diário. Confira a composição dos alimentos; a ausência de informações na base pode afetar os totais.</p>
+      <div className="mt-5 rounded-xl border border-line p-4">
+        <h3 className="font-serif text-xl">Micronutrientes opcionais</h3>
+        <p className="mt-1 text-sm text-ink-2">Selecione os itens relevantes e registre a meta diária. A base atual não permite calcular com segurança os totais desses nutrientes.</p>
+        {micros.map((m, i) => <div key={i} className="mt-3 grid gap-2 sm:grid-cols-[1fr_7rem_6rem_auto]">
+          <Campo label="Nutriente"><Input value={m.nome} disabled={!rascunho} placeholder="Ex.: ferro" onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, nome: e.target.value } : x))} /></Campo>
+          <Campo label="Meta por dia"><Input type="number" min="0" value={m.meta} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, meta: e.target.value } : x))} /></Campo>
+          <Campo label="Unidade"><Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value } : x))}><option>mg</option><option>µg</option><option>g</option></Select></Campo>
+          {rascunho ? <Button type="button" variant="ghost" onClick={() => setMicros((v) => v.filter((_, n) => n !== i))}>Remover</Button> : null}
+        </div>)}
+        {rascunho ? <Button type="button" variant="sand" onClick={() => setMicros((v) => [...v, { nome: "", unidade: "mg", meta: "" }])}>Adicionar micronutriente</Button> : null}
+      </div>
       <div className="mt-4 flex flex-col gap-3">
         {refs.map((ref, idx) => (
           <RefeicaoCard
@@ -907,6 +933,7 @@ function Editor({
             <Button type="button" variant="sand" disabled={ocupado} onClick={async () => { setOcupado(true); const ok = await guardar(); if (ok) await onMudou(); setOcupado(false); }}>
               Salvar horários e metas
             </Button>
+            <Button type="button" variant="sand" disabled={ocupado} onClick={async () => { setOcupado(true); const ok = await guardar(); if (ok) { await onMudou(); onPrevia(); } setOcupado(false); }}>Prévia antes da emissão</Button>
             <Button type="button" disabled={ocupado} onClick={emitir}>
               Emitir prescrição
             </Button>

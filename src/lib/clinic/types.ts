@@ -106,6 +106,8 @@ export type Refeicao = {
   itens: ItemPlano[];
 };
 
+export type MetaMicronutriente = { nome: string; unidade: string; meta: number };
+
 export type Prescricao = {
   id: number;
   titulo: string;
@@ -118,6 +120,8 @@ export type Prescricao = {
   lipMeta: number;
   hidratacao: string;
   emitidaEm: string | null;
+  fibraMeta?: number | null;
+  micronutrientes?: MetaMicronutriente[];
   refeicoes: Refeicao[];
 };
 

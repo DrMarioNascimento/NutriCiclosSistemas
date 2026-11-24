@@ -695,6 +695,8 @@ async function prescricoesDe(sql: Sql, userId: string, pacienteId: number): Prom
     lipMeta: num(r.lip_meta),
     hidratacao: txt(r.hidratacao),
     emitidaEm: r.emitida_em ? String(r.emitida_em) : null,
+    fibraMeta: r.fibra_meta == null ? null : num(r.fibra_meta),
+    micronutrientes: Array.isArray(r.micronutrientes) ? r.micronutrientes as { nome: string; unidade: string; meta: number }[] : [],
     refeicoes: refsPorPres.get(num(r.id)) ?? [],
   }));
 }
@@ -1133,6 +1135,8 @@ const planoInput = z.object({
   protMeta: z.number().min(0).max(500),
   carbMeta: z.number().min(0).max(900),
   lipMeta: z.number().min(0).max(400),
+  fibraMeta: z.number().positive().max(500).nullable().optional(),
+  micronutrientes: z.array(z.object({ nome: z.string().trim().min(1).max(80), unidade: z.enum(["mg", "µg", "g"]), meta: z.number().positive().max(1000000) })).max(30).optional().default([]),
   hidratacao: z.string().trim().max(300).optional().default(""),
   retornoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")),
   refeicoes: z
@@ -1156,7 +1160,8 @@ export const salvarPlano = createServerFn({ method: "POST" })
     const rows = await sql<Record<string, unknown>>`
       update prescricoes set
         titulo = ${data.titulo}, kcal_meta = ${data.kcalMeta}, prot_meta = ${data.protMeta},
-        carb_meta = ${data.carbMeta}, lip_meta = ${data.lipMeta}, hidratacao = ${data.hidratacao},
+        carb_meta = ${data.carbMeta}, lip_meta = ${data.lipMeta}, fibra_meta = ${data.fibraMeta ?? null},
+        micronutrientes = ${JSON.stringify(data.micronutrientes)}::jsonb, hidratacao = ${data.hidratacao},
         retorno_em = ${retorno}, atualizado_em = now()
       where id = ${data.id} and user_id = ${context.userId} and situacao = 'Rascunho'
       returning id, paciente_id
@@ -1183,6 +1188,8 @@ export const emitirPlano = createServerFn({ method: "POST" })
     const sql = await getSql();
     const itens = await sql`select id from itens where prescricao_id = ${data.id} and user_id = ${context.userId} limit 1`;
     if (!itens[0]) throw new Error("Inclua ao menos um alimento antes de emitir.");
+    const metas = await sql<Record<string, unknown>>`select kcal_meta, prot_meta, carb_meta, lip_meta, fibra_meta from prescricoes where id = ${data.id} and user_id = ${context.userId} and situacao = 'Rascunho'`;
+    if (!metas[0] || [metas[0].kcal_meta, metas[0].prot_meta, metas[0].carb_meta, metas[0].lip_meta, metas[0].fibra_meta].some((v) => v == null || !Number.isFinite(Number(v)) || Number(v) <= 0)) throw new Error("Defina metas positivas para energia, proteínas, carboidratos, gorduras e fibras antes da emissão.");
     const rows = await sql`
       update prescricoes set situacao = 'Emitida', emitida_em = now(), atualizado_em = now()
       where id = ${data.id} and user_id = ${context.userId} and situacao = 'Rascunho'
@@ -1205,11 +1212,11 @@ export const novaVersao = createServerFn({ method: "POST" })
     const copia = await sql<Record<string, unknown>>`
       insert into prescricoes (
         user_id, paciente_id, titulo, data, situacao, retorno_em,
-        kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao
+        kcal_meta, prot_meta, carb_meta, lip_meta, fibra_meta, micronutrientes, hidratacao
       ) values (
         ${context.userId}, ${num(base[0].paciente_id)}, ${txt(base[0].titulo)}, ${hoje}, 'Rascunho',
         ${dia(base[0].retorno_em)}, ${num(base[0].kcal_meta)}, ${num(base[0].prot_meta)},
-        ${num(base[0].carb_meta)}, ${num(base[0].lip_meta)}, ${txt(base[0].hidratacao)}
+        ${num(base[0].carb_meta)}, ${num(base[0].lip_meta)}, ${base[0].fibra_meta == null ? null : num(base[0].fibra_meta)}, ${JSON.stringify(base[0].micronutrientes ?? [])}::jsonb, ${txt(base[0].hidratacao)}
       )
       returning id
     `;
