@@ -1034,10 +1034,11 @@ export const salvarAvaliacao = createServerFn({ method: "POST" })
 
 export const buscarAlimentos = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator(z.object({ q: z.string().max(80), somenteTaco: z.boolean().optional() }))
+  .validator(z.object({ q: z.string().max(80), somenteTaco: z.boolean().optional(), fonte: z.enum(["taco", "ibge"]).optional() }))
   .handler(async ({ context, data }): Promise<AlimentoBusca[]> => {
     const { buscarNaLista, buscarAlimentos: buscar } = await import("./food.server");
-    if (data.somenteTaco) return buscar(data.q, 12, true);
+    const fonte = data.fonte ?? (data.somenteTaco ? "taco" : undefined);
+    if (fonte) return buscar(data.q, 12, fonte);
     const sql = await getSql();
     const origem = await itensCatalogo(sql, context.userId);
     const base = origem ? buscarNaLista(origem, data.q) : buscar(data.q);
@@ -1072,6 +1073,7 @@ export const adicionarItem = createServerFn({ method: "POST" })
       qtd: z.number().positive().max(5000),
       confirmarAlergia: z.boolean().optional().default(false),
       somenteTaco: z.boolean().optional(),
+      fonte: z.enum(["taco", "ibge"]).optional(),
     }),
   )
   .handler(async ({ context, data }): Promise<{ alerta: string | null }> => {
@@ -1090,10 +1092,11 @@ export const adicionarItem = createServerFn({ method: "POST" })
     `;
     if (!ref[0]) throw new Error("Refeição não encontrada.");
     const { alimentoNaLista, alimentoPorId, gramasDe } = await import("./food.server");
-    const proprio = data.alimentoId.startsWith("C") ? await alimentoProprio(sql, context.userId, data.alimentoId) : null;
-    const tabela = proprio || data.somenteTaco ? null : await itensCatalogo(sql, context.userId);
+    const fonte = data.fonte ?? (data.somenteTaco ? "taco" : undefined);
+    const proprio = !fonte && data.alimentoId.startsWith("C") ? await alimentoProprio(sql, context.userId, data.alimentoId) : null;
+    const tabela = proprio || fonte ? null : await itensCatalogo(sql, context.userId);
     const al = proprio ?? (tabela ? alimentoNaLista(tabela, data.alimentoId) : alimentoPorId(data.alimentoId));
-    if (!al || (data.somenteTaco && (!("composicaoMicro100" in al) || !al.composicaoMicro100))) {
+    if (!al || (fonte && (!("fonteBase" in al) || al.fonteBase !== fonte))) {
       throw new Error("Alimento não está na tabela selecionada.");
     }
     const alerta = alertaAlergia(txt(pres[0].alergias), al.n, await gatilhosDoUsuario(sql, context.userId));

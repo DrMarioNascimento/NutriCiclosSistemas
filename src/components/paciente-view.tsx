@@ -1,4 +1,4 @@
-import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, codigoMicronutriente, somarMicronutriente, type CodigoMicro } from "@/lib/clinic/composicao-micro";
+import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, FONTE_IBGE, LINK_IBGE, codigoMicronutriente, somarMicronutriente, type CodigoMicro, type FonteAlimento } from "@/lib/clinic/composicao-micro";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
@@ -912,9 +912,9 @@ function Editor({
           Escolha os nutrientes para comparar o total diário do cardápio com a meta que você definir.
         </p>
         <p className="mt-1 text-sm text-muted">
-          Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a>.
+          Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a> e do <a className="underline" href={LINK_IBGE} target="_blank" rel="noreferrer">{FONTE_IBGE}</a>.
         </p>
-        <datalist id="micronutrientes-taco">
+        <datalist id="micronutrientes-catalogo">
           {CODIGOS_MICRO.map((codigo) => <option key={codigo} value={CATALOGO_MICRO[codigo][0]} />)}
         </datalist>
         {micros.map((m, i) => {
@@ -925,7 +925,7 @@ function Editor({
             <div key={i} className="mt-3 rounded-lg border border-line p-3">
               <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_auto]">
                 <Campo label="Nutriente">
-                  <Input list="micronutrientes-taco" value={m.nome} disabled={!rascunho} placeholder="Ex.: Cálcio" onChange={(e) => {
+                  <Input list="micronutrientes-catalogo" value={m.nome} disabled={!rascunho} placeholder="Ex.: Cálcio" onChange={(e) => {
                     const nome = e.target.value;
                     const novoCodigo = codigoMicronutriente(nome);
                     setMicros((v) => v.map((x, n) => n === i ? { ...x, nome, unidade: novoCodigo ? CATALOGO_MICRO[novoCodigo][1] : x.unidade } : x));
@@ -949,7 +949,10 @@ function Editor({
                   {total.tracos ? ` · ${total.tracos} com traços` : ""}
                   {total.semDados ? ` · ${total.semDados} sem dados` : ""}
                 </p>
-              ) : m.nome ? <p className="mt-2 text-sm text-muted">{codigo ? "Adicione alimentos para calcular o total." : "Sem referência de composição na TACO."}</p> : null}
+              ) : m.nome ? <p className="mt-2 text-sm text-muted">{codigo ? "Adicione alimentos para calcular o total." : "Sem referência de composição nas tabelas disponíveis."}</p> : null}
+              {codigo === "sodio" || codigo === "sodio_adicao" ? (
+                <p className="mt-1 text-sm text-muted">O IBGE informa o sódio de adição em uma coluna separada. A soma segue a coluna selecionada.</p>
+              ) : null}
             </div>
           );
         })}
@@ -1087,7 +1090,7 @@ function BuscaAlimento({
   onMudou: () => Promise<void>;
 }) {
   const [q, setQ] = useState("");
-  const [somenteTaco, setSomenteTaco] = useState(false);
+  const [fonte, setFonte] = useState<FonteAlimento | "">("");
   const [lista, setLista] = useState<AlimentoBusca[]>([]);
   const [escolhido, setEscolhido] = useState<AlimentoBusca | null>(null);
   const [medida, setMedida] = useState("Grama");
@@ -1102,12 +1105,12 @@ function BuscaAlimento({
     }
     let cancelado = false;
     const t = setTimeout(() => {
-      buscarAlimentos({ data: { q, somenteTaco } })
+      buscarAlimentos({ data: { q, fonte: fonte || undefined } })
         .then((dados) => { if (!cancelado) setLista(dados); })
         .catch(() => { if (!cancelado) setLista([]); });
     }, 200);
     return () => { cancelado = true; clearTimeout(t); };
-  }, [q, somenteTaco]);
+  }, [q, fonte]);
 
   const medidas = escolhido ? [["Grama", 1] as [string, number], ...escolhido.m] : [["Grama", 1] as [string, number]];
 
@@ -1123,7 +1126,7 @@ function BuscaAlimento({
           medida,
           qtd: Number(qtd.replace(",", ".")),
           confirmarAlergia: confirmar,
-          somenteTaco,
+          fonte: escolhido.fonteBase ?? (fonte || undefined),
         },
       });
       if (res.alerta) {
@@ -1143,15 +1146,20 @@ function BuscaAlimento({
   return (
     <div className="mt-3">
       <Input value={q} onChange={(e) => { setQ(e.target.value); setEscolhido(null); }} placeholder="Buscar alimento (IBGE e TACO)" aria-label="Buscar alimento" />
-      <label className="mt-2 flex min-h-9 items-center gap-2 text-sm text-ink-2">
-        <input type="checkbox" checked={somenteTaco} onChange={(e) => {
-          setSomenteTaco(e.target.checked);
-          setEscolhido(null);
-          setAlerta(null);
-          setLista([]);
-        }} />
-        Buscar apenas na TACO
-      </label>
+      <div className="mt-2 max-w-56">
+        <Campo label="Tabela de alimentos">
+          <Select value={fonte} onChange={(e) => {
+            setFonte(e.target.value as FonteAlimento | "");
+            setEscolhido(null);
+            setAlerta(null);
+            setLista([]);
+          }}>
+            <option value="">Busca padrão</option>
+            <option value="ibge">Apenas IBGE</option>
+            <option value="taco">Apenas TACO</option>
+          </Select>
+        </Campo>
+      </div>
       {lista.length > 0 && !escolhido ? (
         <ul className="mt-1 max-h-48 overflow-auto rounded-lg border border-line bg-paper">
           {lista.map((a) => (
@@ -1167,7 +1175,7 @@ function BuscaAlimento({
                 }}
               >
                 {a.n}
-                <span className="block text-muted">{a.g} · {fmtNum(a.k, 0)} kcal/100 g{a.composicaoMicro100 && Object.keys(a.composicaoMicro100).length ? " · Micronutrientes TACO" : ""}</span>
+                <span className="block text-muted">{a.g} · {fmtNum(a.k, 0)} kcal/100 g{a.fonteBase ? ` · ${a.fonteBase === "ibge" ? "IBGE" : "TACO"}` : ""}</span>
               </button>
             </li>
           ))}

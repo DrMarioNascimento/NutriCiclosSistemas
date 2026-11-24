@@ -1,4 +1,4 @@
-import type { ComposicaoMicro } from "./composicao-micro";
+import type { ComposicaoMicro, FonteAlimento } from "./composicao-micro";
 import type { CampoModelo } from "./catalogo";
 
 export type Clinica = {
@@ -371,4 +371,5 @@ export type AlimentoBusca = {
   f: number;
   m: Array<[string, number]>;
   composicaoMicro100?: ComposicaoMicro;
+  fonteBase?: FonteAlimento;
 };

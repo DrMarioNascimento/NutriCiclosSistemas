@@ -1,19 +1,30 @@
 import raw from "../../data/alimentos.json";
 import taco from "../../data/taco-micronutrientes.json";
-import type { ComposicaoMicro } from "./composicao-micro";
+import ibge1 from "../../data/ibge-micronutrientes-1.json";
+import ibge2 from "../../data/ibge-micronutrientes-2.json";
+import ibge3 from "../../data/ibge-micronutrientes-3.json";
+import ibge4 from "../../data/ibge-micronutrientes-4.json";
+import type { ComposicaoMicro, FonteAlimento } from "./composicao-micro";
 import { semAcento } from "./calc";
 import type { AlimentoBusca } from "./types";
 
 // TACO, NEPA/Unicamp, 4ª edição (2011). Junção pelo número da Tabela 1.
 const tacoPorId: Record<string, ComposicaoMicro> = taco as Record<string, ComposicaoMicro>;
+// IBGE, POF 2008–2009. As chaves P são as linhas da planilha oficial,
+// conferidas pelo nome, preparação e cinco valores de composição já no catálogo.
+const ibgePorId: Record<string, ComposicaoMicro> = { ...ibge1, ...ibge2, ...ibge3, ...ibge4 };
 const lista: AlimentoBusca[] = raw.map((alimento) => ({
   ...alimento,
   m: alimento.m as AlimentoBusca["m"],
   n: alimento.id === "T0540" && alimento.n === "L" ? "Feijoada" : alimento.n,
-  composicaoMicro100: tacoPorId[alimento.id],
+  composicaoMicro100: tacoPorId[alimento.id] ?? ibgePorId[alimento.id],
+  fonteBase: tacoPorId[alimento.id] ? "taco" : ibgePorId[alimento.id] ? "ibge" : undefined,
 }));
 const porId = new Map(lista.map((a) => [a.id, a]));
-const listaTaco = lista.filter((alimento) => alimento.composicaoMicro100 !== undefined);
+const listasPorFonte = {
+  taco: lista.filter((alimento) => alimento.fonteBase === "taco"),
+  ibge: lista.filter((alimento) => alimento.fonteBase === "ibge"),
+};
 
 export const QTD_BASE = lista.length;
 
@@ -25,8 +36,8 @@ export function alimentoNaLista(origem: readonly AlimentoBusca[], id: string): A
   return origem.find((a) => a.id === id);
 }
 
-export function buscarAlimentos(q: string, limite = 12, somenteTaco = false): AlimentoBusca[] {
-  return buscarNaLista(somenteTaco ? listaTaco : lista, q, limite);
+export function buscarAlimentos(q: string, limite = 12, fonte?: FonteAlimento): AlimentoBusca[] {
+  return buscarNaLista(fonte ? listasPorFonte[fonte] : lista, q, limite);
 }
 
 export function buscarNaLista(origem: readonly AlimentoBusca[], q: string, limite = 12): AlimentoBusca[] {
