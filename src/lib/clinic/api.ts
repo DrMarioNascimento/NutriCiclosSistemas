@@ -1,4 +1,4 @@
-import { composicaoMicroPorPorcao, lerComposicaoMicro } from "./composicao-micro";
+import { composicaoMicroPorPorcao, lerComposicaoMicro, lerMetasMicro } from "./composicao-micro";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { authMiddleware } from "@/lib/auth/middleware";
@@ -392,6 +392,7 @@ async function modelosCardapioDe(sql: Sql, userId: string): Promise<ModeloCardap
   `;
   return rows.map((r) => ({
     id: num(r.id),
+    micronutrientes: lerMetasMicro(r.micronutrientes),
     titulo: txt(r.titulo),
     tema: txt(r.tema),
     kcalMeta: num(r.kcal_meta),
@@ -588,6 +589,7 @@ async function avaliacoesDe(sql: Sql, userId: string, pacienteId: number, objeti
     const get = num(r.get_kcal);
     return {
       id: num(r.id),
+      micronutrientes: lerMetasMicro(r.micronutrientes),
       data: dia(r.data) ?? "",
       peso: num(r.peso),
       altura: num(r.altura),
@@ -699,7 +701,7 @@ async function prescricoesDe(sql: Sql, userId: string, pacienteId: number): Prom
     hidratacao: txt(r.hidratacao),
     emitidaEm: r.emitida_em ? String(r.emitida_em) : null,
     fibraMeta: r.fibra_meta == null ? null : num(r.fibra_meta),
-    micronutrientes: Array.isArray(r.micronutrientes) ? r.micronutrientes as { nome: string; unidade: string; meta: number }[] : [],
+    micronutrientes: lerMetasMicro(r.micronutrientes),
     refeicoes: refsPorPres.get(num(r.id)) ?? [],
   }));
 }
@@ -973,6 +975,12 @@ export const salvarPaciente = createServerFn({ method: "POST" })
     return { id: num(rows[0].id) };
   });
 
+const metasMicroInput = z.array(z.object({
+  nome: z.string().trim().min(1).max(80),
+  unidade: z.enum(["mg", "µg", "g"]),
+  meta: z.number().positive().max(1000000),
+})).max(30).optional();
+
 const avaliacaoInput = z.object({
   pacienteId: z.number().int().positive(),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -988,6 +996,7 @@ const avaliacaoInput = z.object({
   gestante: z.enum(["Sim", "Não"]),
   lactante: z.enum(["Sim", "Não"]),
   trimestre: z.enum(["", "1", "2", "3"]).optional().default(""),
+  micronutrientes: metasMicroInput,
   kcalMeta: z.number().min(500).max(6000),
   observacoes: z.string().max(1000).optional().default(""),
   gorduraPct: z.number().min(0).max(80).nullable(),
@@ -1017,13 +1026,13 @@ export const salvarAvaliacao = createServerFn({ method: "POST" })
         user_id, paciente_id, data, peso, altura, cintura, quadril, atividade, equipamento,
         jejum, sem_exercicio, hidratacao, gestante, lactante, trimestre, imc, tmb, get_kcal,
         kcal_meta, prot_meta, lip_meta, carb_meta, idade, diagnostico, observacoes,
-        gordura_pct, massa_muscular
+        gordura_pct, massa_muscular, micronutrientes
       ) values (
         ${context.userId}, ${paciente.id}, ${data.data}, ${data.peso}, ${data.altura}, ${data.cintura},
         ${data.quadril}, ${data.atividade}, ${data.equipamento}, ${data.jejum}, ${data.semExercicio},
         ${data.hidratacao}, ${data.gestante}, ${data.lactante}, ${data.trimestre}, ${imcV}, ${tmb}, ${get},
         ${Math.round(data.kcalMeta)}, ${macro.prot}, ${macro.lip}, ${macro.carb}, ${idade}, ${diag},
-        ${data.observacoes}, ${data.gorduraPct}, ${data.massaMuscular}
+        ${data.observacoes}, ${data.gorduraPct}, ${data.massaMuscular}, ${JSON.stringify(data.micronutrientes ?? [])}::jsonb
       )
       returning id
     `;
@@ -1147,7 +1156,7 @@ const planoInput = z.object({
   carbMeta: z.number().min(0).max(900),
   lipMeta: z.number().min(0).max(400),
   fibraMeta: z.number().positive().max(500).nullable().optional(),
-  micronutrientes: z.array(z.object({ nome: z.string().trim().min(1).max(80), unidade: z.enum(["mg", "µg", "g"]), meta: z.number().positive().max(1000000) })).max(30).optional().default([]),
+  micronutrientes: metasMicroInput,
   hidratacao: z.string().trim().max(300).optional().default(""),
   retornoEm: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")),
   refeicoes: z
@@ -1172,7 +1181,7 @@ export const salvarPlano = createServerFn({ method: "POST" })
       update prescricoes set
         titulo = ${data.titulo}, kcal_meta = ${data.kcalMeta}, prot_meta = ${data.protMeta},
         carb_meta = ${data.carbMeta}, lip_meta = ${data.lipMeta}, fibra_meta = ${data.fibraMeta ?? null},
-        micronutrientes = ${JSON.stringify(data.micronutrientes)}::jsonb, hidratacao = ${data.hidratacao},
+        micronutrientes = coalesce(${data.micronutrientes ? JSON.stringify(data.micronutrientes) : null}::jsonb, micronutrientes), hidratacao = ${data.hidratacao},
         retorno_em = ${retorno}, atualizado_em = now()
       where id = ${data.id} and user_id = ${context.userId} and situacao = 'Rascunho'
       returning id, paciente_id
@@ -2053,6 +2062,7 @@ export const criarCardapio = createServerFn({ method: "POST" })
     let prot = aval[0] ? num(aval[0].prot_meta) : 0;
     let carb = aval[0] ? num(aval[0].carb_meta) : 0;
     let lip = aval[0] ? num(aval[0].lip_meta) : 0;
+    let micros = data.origem === "branco" ? [] : lerMetasMicro(aval[0]?.micronutrientes);
     let hidratacao = "Água ao longo do dia";
     let refeicoes = vazias;
 
@@ -2064,6 +2074,7 @@ export const criarCardapio = createServerFn({ method: "POST" })
       const modelo = (await modelosCardapioDe(sql, context.userId)).find((m) => m.id === data.origemId);
       if (!modelo) throw new Error("Modelo não encontrado.");
       titulo = modelo.titulo;
+      micros = modelo.micronutrientes ?? [];
       kcal = modelo.kcalMeta || kcal;
       prot = modelo.protMeta || prot;
       carb = modelo.carbMeta || carb;
@@ -2077,6 +2088,7 @@ export const criarCardapio = createServerFn({ method: "POST" })
       `;
       if (!base[0]) throw new Error("Prescrição não encontrada.");
       titulo = `Cópia — ${txt(base[0].titulo)}`;
+      micros = lerMetasMicro(base[0].micronutrientes);
       kcal = num(base[0].kcal_meta);
       prot = num(base[0].prot_meta);
       carb = num(base[0].carb_meta);
@@ -2092,6 +2104,7 @@ export const criarCardapio = createServerFn({ method: "POST" })
       if (data.origem === "dieta" && num(base[0].paciente_id) !== paciente.id) throw new Error("Essa dieta é de outro paciente.");
       if (data.origem === "modeloDieta" && txt(base[0].tipo) !== "modelo") throw new Error("Escolha um modelo de dieta.");
       titulo = txt(base[0].nome);
+      micros = lerMetasMicro(base[0].micronutrientes);
       kcal = num(base[0].kcal_meta) || kcal;
       prot = num(base[0].prot_meta) || prot;
       carb = num(base[0].carb_meta) || carb;
@@ -2110,10 +2123,10 @@ export const criarCardapio = createServerFn({ method: "POST" })
     const criada = await sql<Record<string, unknown>>`
       insert into prescricoes (
         user_id, paciente_id, titulo, data, situacao, retorno_em,
-        kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao
+        kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao, micronutrientes
       ) values (
         ${context.userId}, ${paciente.id}, ${titulo}, ${hoje}, 'Rascunho', ${retorno},
-        ${kcal}, ${prot}, ${carb}, ${lip}, ${hidratacao}
+        ${kcal}, ${prot}, ${carb}, ${lip}, ${hidratacao}, ${JSON.stringify(micros)}::jsonb
       )
       returning id
     `;
@@ -2141,11 +2154,12 @@ export const guardarComoModelo = createServerFn({ method: "POST" })
     const refeicoes = await estruturaDaPrescricao(sql, context.userId, data.prescricaoId);
     const rows = await sql<Record<string, unknown>>`
       insert into modelos_cardapio (
-        user_id, titulo, tema, kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao, refeicoes
+        user_id, titulo, tema, kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao, refeicoes, micronutrientes
       ) values (
         ${context.userId}, ${data.titulo}, ${data.tema},
         ${num(base[0].kcal_meta)}, ${num(base[0].prot_meta)}, ${num(base[0].carb_meta)}, ${num(base[0].lip_meta)},
-        ${txt(base[0].hidratacao)}, ${JSON.stringify(refeicoes)}::jsonb
+        ${txt(base[0].hidratacao)}, ${JSON.stringify(refeicoes)}::jsonb,
+        ${JSON.stringify(lerMetasMicro(base[0].micronutrientes))}::jsonb
       )
       returning id
     `;
@@ -2340,6 +2354,7 @@ async function dietasDe(sql: Sql, userId: string): Promise<Dieta[]> {
   `;
   return rows.map((r) => ({
     id: num(r.id),
+    micronutrientes: lerMetasMicro(r.micronutrientes),
     tipo: txt(r.tipo) === "modelo" ? "modelo" : "paciente",
     pacienteId: numOrNull(r.paciente_id),
     nome: txt(r.nome),
@@ -2374,6 +2389,7 @@ export const salvarDieta = createServerFn({ method: "POST" })
       protMeta: z.number().min(0).max(500),
       carbMeta: z.number().min(0).max(1000),
       lipMeta: z.number().min(0).max(500),
+      micronutrientes: metasMicroInput,
       observacoes: z.string().trim().max(1000).optional().default(""),
       refeicoes: z.array(refeicaoDietaInput).min(1).max(12),
     }),
@@ -2393,7 +2409,9 @@ export const salvarDieta = createServerFn({ method: "POST" })
           paciente_id = ${pacienteId}, tipo = ${data.tipo}, nome = ${data.nome}, data = ${quando},
           indicacao = ${data.indicacao}, kcal_meta = ${data.kcalMeta}, prot_meta = ${data.protMeta},
           carb_meta = ${data.carbMeta}, lip_meta = ${data.lipMeta}, observacoes = ${data.observacoes},
-          refeicoes = ${refeicoes}::jsonb, atualizado_em = now()
+          refeicoes = ${refeicoes}::jsonb,
+          micronutrientes = coalesce(${data.micronutrientes ? JSON.stringify(data.micronutrientes) : null}::jsonb, micronutrientes),
+          atualizado_em = now()
         where id = ${data.id} and user_id = ${context.userId}
         returning id
       `;
@@ -2403,11 +2421,11 @@ export const salvarDieta = createServerFn({ method: "POST" })
     const rows = await sql<Record<string, unknown>>`
       insert into dietas (
         user_id, paciente_id, tipo, nome, data, indicacao,
-        kcal_meta, prot_meta, carb_meta, lip_meta, observacoes, refeicoes
+        kcal_meta, prot_meta, carb_meta, lip_meta, observacoes, refeicoes, micronutrientes
       ) values (
         ${context.userId}, ${pacienteId}, ${data.tipo}, ${data.nome}, ${quando}, ${data.indicacao},
         ${data.kcalMeta}, ${data.protMeta}, ${data.carbMeta}, ${data.lipMeta}, ${data.observacoes},
-        ${refeicoes}::jsonb
+        ${refeicoes}::jsonb, ${JSON.stringify(data.micronutrientes ?? [])}::jsonb
       )
       returning id
     `;

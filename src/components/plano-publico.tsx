@@ -1,3 +1,4 @@
+import { ResumoMicronutrientes } from "./micronutrientes-view";
 import { useEffect, useState, type FormEvent } from "react";
 import { confirmarPlano, lerPlanoPublico } from "@/lib/clinic/api";
 import { fmtData, fmtNum } from "@/lib/clinic/calc";
@@ -142,6 +143,7 @@ export function PlanoPublico({ token }: { token: string }) {
               {ref.orientacao ? <p className="mt-1 text-sm text-ink-2">{ref.orientacao}</p> : null}
             </section>
           ))}
+          <ResumoMicronutrientes metas={cardapio.micronutrientes} itens={cardapio.refeicoes.flatMap((r) => r.itens)} />
           {cardapio.hidratacao ? <p className="mt-6 text-sm">Hidratação: {cardapio.hidratacao}</p> : null}
         </>
       ) : (

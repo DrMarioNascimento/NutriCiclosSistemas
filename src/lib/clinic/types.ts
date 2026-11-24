@@ -80,6 +80,7 @@ export type Avaliacao = {
   sugeridaKcal: number;
   gorduraPct: number | null;
   massaMuscular: number | null;
+  micronutrientes?: MetaMicronutriente[];
 };
 
 export type ItemPlano = {
@@ -108,7 +109,7 @@ export type Refeicao = {
   itens: ItemPlano[];
 };
 
-export type MetaMicronutriente = { nome: string; unidade: string; meta: number };
+export type MetaMicronutriente = { nome: string; unidade: "mg" | "µg" | "g"; meta: number };
 
 export type Prescricao = {
   id: number;
@@ -192,6 +193,7 @@ export type Dieta = {
   lipMeta: number;
   observacoes: string;
   refeicoes: RefeicaoDieta[];
+  micronutrientes?: MetaMicronutriente[];
 };
 
 export type AlimentoProprio = {
@@ -237,6 +239,7 @@ export type ModeloCardapio = {
   lipMeta: number;
   hidratacao: string;
   refeicoes: RefeicaoModelo[];
+  micronutrientes?: MetaMicronutriente[];
 };
 
 export type Painel = {

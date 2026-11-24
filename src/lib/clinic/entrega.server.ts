@@ -1,3 +1,4 @@
+import { codigoMicronutriente, lerComposicaoMicro, lerMetasMicro, type ComposicaoMicro } from "./composicao-micro";
 import { getSql } from "@/lib/db";
 import type { CapaPlano, ItemPlano, PlanoAberto, Prescricao, Refeicao, RefeicaoDieta } from "./types";
 
@@ -115,6 +116,8 @@ export async function planoDoToken(token: string, confirmacao: { nascimento: str
   const cap = caps[0];
   if (cap) {
     const presId = num(cap.id);
+    const metasMicro = lerMetasMicro(cap.micronutrientes);
+    const codigos = new Set(metasMicro.map((m) => codigoMicronutriente(m.nome)));
     const refs = await sql<Record<string, unknown>>`
       select * from refeicoes where user_id = ${userId} and prescricao_id = ${presId} order by ordem, id
     `;
@@ -137,6 +140,8 @@ export async function planoDoToken(token: string, confirmacao: { nascimento: str
         cho: num(r.cho),
         lip: num(r.lip),
         fibra: num(r.fibra),
+        composicaoMicro: Object.fromEntries(Object.entries(lerComposicaoMicro(r.composicao_micro))
+          .filter(([codigo]) => codigos.has(codigo as keyof ComposicaoMicro))),
       };
       const lista = porRef.get(item.refeicaoId) ?? [];
       lista.push(item);
@@ -162,6 +167,7 @@ export async function planoDoToken(token: string, confirmacao: { nascimento: str
       lipMeta: num(cap.lip_meta),
       hidratacao: txt(cap.hidratacao),
       emitidaEm: cap.emitida_em ? String(cap.emitida_em) : null,
+      micronutrientes: metasMicro,
       refeicoes,
     };
   }

@@ -1,4 +1,4 @@
-import { lerComposicaoMicro } from "./composicao-micro";
+import { lerComposicaoMicro, lerMetasMicro } from "./composicao-micro";
 import type { Sql } from "@/lib/db";
 
 type Json = null | string | number | boolean | Json[] | { [k: string]: Json };
@@ -274,7 +274,7 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
         user_id, paciente_id, data, peso, altura, cintura, quadril, atividade, equipamento,
         jejum, sem_exercicio, hidratacao, gestante, lactante, trimestre, imc, tmb, get_kcal,
         kcal_meta, prot_meta, lip_meta, carb_meta, idade, diagnostico, observacoes,
-        gordura_pct, massa_muscular, atualizado_em
+        gordura_pct, massa_muscular, atualizado_em, micronutrientes
       ) values (
         ${userId}, ${paciente(a.paciente_id)}, ${data(a.data) ?? "1970-01-01"}::date,
         ${num(a.peso)}, ${num(a.altura)}, ${a.cintura == null || a.cintura === "" ? null : num(a.cintura)},
@@ -285,7 +285,8 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
         ${num(a.carb_meta)}, ${Math.round(num(a.idade))}, ${txt(a.diagnostico, 200)}, ${txt(a.observacoes, 1000)},
         ${a.gordura_pct == null || a.gordura_pct === "" ? null : num(a.gordura_pct)},
         ${a.massa_muscular == null || a.massa_muscular === "" ? null : num(a.massa_muscular)},
-        ${instante(a.atualizado_em) ?? new Date().toISOString()}::timestamptz
+        ${instante(a.atualizado_em) ?? new Date().toISOString()}::timestamptz,
+        ${JSON.stringify(lerMetasMicro(a.micronutrientes))}::jsonb
       )
     `;
   }
@@ -399,12 +400,13 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
     await sql`
       insert into dietas (
         user_id, paciente_id, tipo, nome, data, indicacao, kcal_meta, prot_meta, carb_meta, lip_meta,
-        observacoes, refeicoes, atualizado_em
+        observacoes, refeicoes, atualizado_em, micronutrientes
       ) values (
         ${userId}, ${pid ? paciente(d.paciente_id) : null}, ${txt(d.tipo, 20) || "paciente"}, ${txt(d.nome, 120)},
         ${data(d.data)}::date, ${txt(d.indicacao, 160)}, ${num(d.kcal_meta)}, ${num(d.prot_meta)}, ${num(d.carb_meta)},
         ${num(d.lip_meta)}, ${txt(d.observacoes, 1000)}, ${json(d.refeicoes)}::jsonb,
-        ${instante(d.atualizado_em) ?? new Date().toISOString()}::timestamptz
+        ${instante(d.atualizado_em) ?? new Date().toISOString()}::timestamptz,
+        ${JSON.stringify(lerMetasMicro(d.micronutrientes))}::jsonb
       )
     `;
   }
@@ -429,11 +431,12 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
   for (const m of b.modelosCardapio) {
     await sql`
       insert into modelos_cardapio (
-        user_id, titulo, tema, kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao, refeicoes, atualizado_em
+        user_id, titulo, tema, kcal_meta, prot_meta, carb_meta, lip_meta, hidratacao, refeicoes, atualizado_em, micronutrientes
       ) values (
         ${userId}, ${txt(m.titulo, 120)}, ${txt(m.tema, 80)}, ${num(m.kcal_meta)}, ${num(m.prot_meta)},
         ${num(m.carb_meta)}, ${num(m.lip_meta)}, ${txt(m.hidratacao, 300)}, ${json(m.refeicoes)}::jsonb,
-        ${instante(m.atualizado_em) ?? new Date().toISOString()}::timestamptz
+        ${instante(m.atualizado_em) ?? new Date().toISOString()}::timestamptz,
+        ${JSON.stringify(lerMetasMicro(m.micronutrientes))}::jsonb
       )
     `;
   }
