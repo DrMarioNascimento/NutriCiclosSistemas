@@ -15,6 +15,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAgendaRouteImport } from './routes/_app/agenda'
 import { Route as AppSistemaRouteImport } from './routes/_app/sistema'
 import { Route as PlanoTokenRouteImport } from './routes/plano.$token'
+import { Route as VerificarTokenRouteImport } from './routes/verificar.$token'
 import { Route as AppPacientesIndexRouteImport } from './routes/_app/pacientes/index'
 import { Route as AppPacientesPacienteIdRouteImport } from './routes/_app/pacientes/$pacienteId'
 import { Route as ApiAgendaTokenRouteImport } from './routes/api/agenda/$token'
@@ -49,6 +50,11 @@ const PlanoTokenRoute = PlanoTokenRouteImport.update({
   path: '/plano/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerificarTokenRoute = VerificarTokenRouteImport.update({
+  id: '/verificar/$token',
+  path: '/verificar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppPacientesIndexRoute = AppPacientesIndexRouteImport.update({
   id: '/pacientes/',
   path: '/pacientes/',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AppAgendaRoute
   '/sistema': typeof AppSistemaRoute
   '/plano/$token': typeof PlanoTokenRoute
+  '/verificar/$token': typeof VerificarTokenRoute
   '/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
   '/api/agenda/$token': typeof ApiAgendaTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AppAgendaRoute
   '/sistema': typeof AppSistemaRoute
   '/plano/$token': typeof PlanoTokenRoute
+  '/verificar/$token': typeof VerificarTokenRoute
   '/': typeof AppIndexRoute
   '/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
   '/api/agenda/$token': typeof ApiAgendaTokenRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/sistema': typeof AppSistemaRoute
   '/plano/$token': typeof PlanoTokenRoute
+  '/verificar/$token': typeof VerificarTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
   '/api/agenda/$token': typeof ApiAgendaTokenRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/sistema'
     | '/plano/$token'
+    | '/verificar/$token'
     | '/pacientes/$pacienteId'
     | '/api/agenda/$token'
     | '/api/auth/$'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/sistema'
     | '/plano/$token'
+    | '/verificar/$token'
     | '/'
     | '/pacientes/$pacienteId'
     | '/api/agenda/$token'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/_app/agenda'
     | '/_app/sistema'
     | '/plano/$token'
+    | '/verificar/$token'
     | '/_app/'
     | '/_app/pacientes/$pacienteId'
     | '/api/agenda/$token'
@@ -146,6 +158,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlanoTokenRoute: typeof PlanoTokenRoute
+  VerificarTokenRoute: typeof VerificarTokenRoute
   ApiAgendaTokenRoute: typeof ApiAgendaTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/plano/$token'
       fullPath: '/plano/$token'
       preLoaderRoute: typeof PlanoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verificar/$token': {
+      id: '/verificar/$token'
+      path: '/verificar/$token'
+      fullPath: '/verificar/$token'
+      preLoaderRoute: typeof VerificarTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/pacientes/': {
@@ -247,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   PlanoTokenRoute: PlanoTokenRoute,
+  VerificarTokenRoute: VerificarTokenRoute,
   ApiAgendaTokenRoute: ApiAgendaTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
