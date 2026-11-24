@@ -1,3 +1,4 @@
+import { lerComposicaoMicro } from "./composicao-micro";
 import type { Sql } from "@/lib/db";
 
 type Json = null | string | number | boolean | Json[] | { [k: string]: Json };
@@ -295,12 +296,13 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
     const rows = await sql<Linha>`
       insert into prescricoes (
         user_id, paciente_id, titulo, data, situacao, retorno_em, kcal_meta, prot_meta, carb_meta, lip_meta,
-        hidratacao, emitida_em, atualizado_em
+        hidratacao, emitida_em, atualizado_em, fibra_meta, micronutrientes
       ) values (
         ${userId}, ${paciente(p.paciente_id)}, ${txt(p.titulo, 120)}, ${data(p.data) ?? "1970-01-01"}::date,
         ${txt(p.situacao, 20) || "Rascunho"}, ${data(p.retorno_em)}::date,
         ${num(p.kcal_meta)}, ${num(p.prot_meta)}, ${num(p.carb_meta)}, ${num(p.lip_meta)}, ${txt(p.hidratacao, 300)},
-        ${instante(p.emitida_em)}::timestamptz, ${instante(p.atualizado_em) ?? new Date().toISOString()}::timestamptz
+        ${instante(p.emitida_em)}::timestamptz, ${instante(p.atualizado_em) ?? new Date().toISOString()}::timestamptz,
+        ${p.fibra_meta == null ? null : num(p.fibra_meta)}, ${JSON.stringify(Array.isArray(p.micronutrientes) ? p.micronutrientes : [])}::jsonb
       )
       returning id
     `;
@@ -327,11 +329,11 @@ export async function restaurarBackup(sql: Sql, userId: string, bruto: unknown) 
     await sql`
       insert into itens (
         user_id, prescricao_id, refeicao_id, ordem, alimento_id, alimento_nome, medida, qtd, gramas,
-        kcal, ptn, cho, lip, fibra
+        kcal, ptn, cho, lip, fibra, composicao_micro
       ) values (
         ${userId}, ${prescricaoId}, ${refeicaoId}, ${Math.round(num(item.ordem))}, ${txt(item.alimento_id, 20)},
         ${txt(item.alimento_nome, 160)}, ${txt(item.medida, 40)}, ${num(item.qtd)}, ${num(item.gramas)},
-        ${num(item.kcal)}, ${num(item.ptn)}, ${num(item.cho)}, ${num(item.lip)}, ${num(item.fibra)}
+        ${num(item.kcal)}, ${num(item.ptn)}, ${num(item.cho)}, ${num(item.lip)}, ${num(item.fibra)}, ${JSON.stringify(lerComposicaoMicro(item.composicao_micro))}::jsonb
       )
     `;
   }

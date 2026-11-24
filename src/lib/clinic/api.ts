@@ -1,3 +1,4 @@
+import { composicaoMicroPorPorcao, lerComposicaoMicro } from "./composicao-micro";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { authMiddleware } from "@/lib/auth/middleware";
@@ -361,6 +362,7 @@ function refeicoesModelo(v: unknown): RefeicaoModelo[] {
           cho: num(i.cho),
           lip: num(i.lip),
           fibra: num(i.fibra),
+          composicaoMicro: lerComposicaoMicro(i.composicaoMicro),
         };
       }),
     };
@@ -663,6 +665,7 @@ async function prescricoesDe(sql: Sql, userId: string, pacienteId: number): Prom
       cho: num(r.cho),
       lip: num(r.lip),
       fibra: num(r.fibra),
+      composicaoMicro: lerComposicaoMicro(r.composicao_micro),
     };
     const lista = itensPorRef.get(item.refeicaoId) ?? [];
     lista.push(item);
@@ -1031,9 +1034,10 @@ export const salvarAvaliacao = createServerFn({ method: "POST" })
 
 export const buscarAlimentos = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator(z.object({ q: z.string().max(80) }))
+  .validator(z.object({ q: z.string().max(80), somenteTaco: z.boolean().optional() }))
   .handler(async ({ context, data }): Promise<AlimentoBusca[]> => {
     const { buscarNaLista, buscarAlimentos: buscar } = await import("./food.server");
+    if (data.somenteTaco) return buscar(data.q, 12, true);
     const sql = await getSql();
     const origem = await itensCatalogo(sql, context.userId);
     const base = origem ? buscarNaLista(origem, data.q) : buscar(data.q);
@@ -1067,6 +1071,7 @@ export const adicionarItem = createServerFn({ method: "POST" })
       medida: z.string().min(1).max(40),
       qtd: z.number().positive().max(5000),
       confirmarAlergia: z.boolean().optional().default(false),
+      somenteTaco: z.boolean().optional(),
     }),
   )
   .handler(async ({ context, data }): Promise<{ alerta: string | null }> => {
@@ -1086,14 +1091,17 @@ export const adicionarItem = createServerFn({ method: "POST" })
     if (!ref[0]) throw new Error("Refeição não encontrada.");
     const { alimentoNaLista, alimentoPorId, gramasDe } = await import("./food.server");
     const proprio = data.alimentoId.startsWith("C") ? await alimentoProprio(sql, context.userId, data.alimentoId) : null;
-    const tabela = proprio ? null : await itensCatalogo(sql, context.userId);
+    const tabela = proprio || data.somenteTaco ? null : await itensCatalogo(sql, context.userId);
     const al = proprio ?? (tabela ? alimentoNaLista(tabela, data.alimentoId) : alimentoPorId(data.alimentoId));
-    if (!al) throw new Error("Alimento não está na tabela.");
+    if (!al || (data.somenteTaco && (!("composicaoMicro100" in al) || !al.composicaoMicro100))) {
+      throw new Error("Alimento não está na tabela selecionada.");
+    }
     const alerta = alertaAlergia(txt(pres[0].alergias), al.n, await gatilhosDoUsuario(sql, context.userId));
     if (alerta && !data.confirmarAlergia) return { alerta };
     const gramas = gramasDe(al, data.medida, data.qtd);
     if (!gramas) throw new Error("Medida não encontrada para este alimento.");
     const n = nutrientes({ k: al.k, p: al.p, c: al.c, l: al.l, f: al.f }, gramas);
+    const micros = composicaoMicroPorPorcao(lerComposicaoMicro("composicaoMicro100" in al ? al.composicaoMicro100 : undefined), gramas);
     const ordemRows = await sql<Record<string, unknown>>`
       select coalesce(max(ordem), 0) as m from itens
       where user_id = ${context.userId} and refeicao_id = ${data.refeicaoId}
@@ -1101,10 +1109,10 @@ export const adicionarItem = createServerFn({ method: "POST" })
     await sql`
       insert into itens (
         user_id, prescricao_id, refeicao_id, ordem, alimento_id, alimento_nome,
-        medida, qtd, gramas, kcal, ptn, cho, lip, fibra
+        medida, qtd, gramas, kcal, ptn, cho, lip, fibra, composicao_micro
       ) values (
         ${context.userId}, ${data.prescricaoId}, ${data.refeicaoId}, ${num(ordemRows[0].m) + 1},
-        ${al.id}, ${al.n}, ${data.medida}, ${data.qtd}, ${gramas}, ${n.kcal}, ${n.ptn}, ${n.cho}, ${n.lip}, ${n.fibra}
+        ${al.id}, ${al.n}, ${data.medida}, ${data.qtd}, ${gramas}, ${n.kcal}, ${n.ptn}, ${n.cho}, ${n.lip}, ${n.fibra}, ${JSON.stringify(micros)}::jsonb
       )
     `;
     await sql`update prescricoes set atualizado_em = now() where id = ${data.prescricaoId} and user_id = ${context.userId}`;
@@ -1237,11 +1245,11 @@ export const novaVersao = createServerFn({ method: "POST" })
         await sql`
           insert into itens (
             user_id, prescricao_id, refeicao_id, ordem, alimento_id, alimento_nome,
-            medida, qtd, gramas, kcal, ptn, cho, lip, fibra
+            medida, qtd, gramas, kcal, ptn, cho, lip, fibra, composicao_micro
           ) values (
             ${context.userId}, ${novoId}, ${num(nova[0].id)}, ${num(item.ordem)}, ${txt(item.alimento_id)},
             ${txt(item.alimento_nome)}, ${txt(item.medida)}, ${num(item.qtd)}, ${num(item.gramas)},
-            ${num(item.kcal)}, ${num(item.ptn)}, ${num(item.cho)}, ${num(item.lip)}, ${num(item.fibra)}
+            ${num(item.kcal)}, ${num(item.ptn)}, ${num(item.cho)}, ${num(item.lip)}, ${num(item.fibra)}, ${JSON.stringify(lerComposicaoMicro(item.composicao_micro))}::jsonb
           )
         `;
       }
@@ -1973,10 +1981,10 @@ async function inserirEstrutura(sql: Sql, userId: string, prescricaoId: number, 
       await sql`
         insert into itens (
           user_id, prescricao_id, refeicao_id, ordem, alimento_id, alimento_nome,
-          medida, qtd, gramas, kcal, ptn, cho, lip, fibra
+          medida, qtd, gramas, kcal, ptn, cho, lip, fibra, composicao_micro
         ) values (
           ${userId}, ${prescricaoId}, ${refeicaoId}, ${j + 1}, ${item.alimentoId}, ${item.alimentoNome},
-          ${item.medida}, ${item.qtd}, ${item.gramas}, ${item.kcal}, ${item.ptn}, ${item.cho}, ${item.lip}, ${item.fibra}
+          ${item.medida}, ${item.qtd}, ${item.gramas}, ${item.kcal}, ${item.ptn}, ${item.cho}, ${item.lip}, ${item.fibra}, ${JSON.stringify(item.composicaoMicro ?? {})}::jsonb
         )
       `;
     }
@@ -2007,6 +2015,7 @@ async function estruturaDaPrescricao(sql: Sql, userId: string, prescricaoId: num
         cho: num(item.cho),
         lip: num(item.lip),
         fibra: num(item.fibra),
+        composicaoMicro: lerComposicaoMicro(item.composicao_micro),
       })),
     });
   }

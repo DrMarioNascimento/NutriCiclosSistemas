@@ -1,3 +1,4 @@
+import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, codigoMicronutriente, somarMicronutriente, type CodigoMicro } from "@/lib/clinic/composicao-micro";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
@@ -785,6 +786,8 @@ function Editor({
   const [ocupado, setOcupado] = useState(false);
   const rascunho = plano.situacao === "Rascunho";
   const totais = soma({ ...plano, refeicoes: refs });
+  const itensCardapio = refs.flatMap((ref) => ref.itens);
+  const microsEscolhidos = [...new Set(micros.map((m) => codigoMicronutriente(m.nome)).filter((codigo) => codigo !== undefined))];
 
   const assinatura = plano.refeicoes.map((r) => r.itens.map((i) => i.id).join(",")).join("|");
 
@@ -905,13 +908,51 @@ function Editor({
       <p className="mt-2 text-sm text-muted">Valores estimados para o cardápio diário. Confira a composição dos alimentos; a ausência de informações na base pode afetar os totais.</p>
       <div className="mt-5 rounded-xl border border-line p-4">
         <h3 className="font-serif text-xl">Micronutrientes opcionais</h3>
-        <p className="mt-1 text-sm text-ink-2">Selecione os itens relevantes e registre a meta diária. A base atual não permite calcular com segurança os totais desses nutrientes.</p>
-        {micros.map((m, i) => <div key={i} className="mt-3 grid gap-2 sm:grid-cols-[1fr_7rem_6rem_auto]">
-          <Campo label="Nutriente"><Input value={m.nome} disabled={!rascunho} placeholder="Ex.: ferro" onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, nome: e.target.value } : x))} /></Campo>
-          <Campo label="Meta por dia"><Input type="number" min="0" value={m.meta} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, meta: e.target.value } : x))} /></Campo>
-          <Campo label="Unidade"><Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value } : x))}><option>mg</option><option>µg</option><option>g</option></Select></Campo>
-          {rascunho ? <Button type="button" variant="ghost" onClick={() => setMicros((v) => v.filter((_, n) => n !== i))}>Remover</Button> : null}
-        </div>)}
+        <p className="mt-1 text-sm text-ink-2">
+          Escolha os nutrientes para comparar o total diário do cardápio com a meta que você definir.
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a>.
+        </p>
+        <datalist id="micronutrientes-taco">
+          {CODIGOS_MICRO.map((codigo) => <option key={codigo} value={CATALOGO_MICRO[codigo][0]} />)}
+        </datalist>
+        {micros.map((m, i) => {
+          const codigo = codigoMicronutriente(m.nome);
+          const total = codigo ? somarMicronutriente(itensCardapio, codigo) : null;
+          const unidadeTabela = codigo ? CATALOGO_MICRO[codigo][1] : "";
+          return (
+            <div key={i} className="mt-3 rounded-lg border border-line p-3">
+              <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_auto]">
+                <Campo label="Nutriente">
+                  <Input list="micronutrientes-taco" value={m.nome} disabled={!rascunho} placeholder="Ex.: Cálcio" onChange={(e) => {
+                    const nome = e.target.value;
+                    const novoCodigo = codigoMicronutriente(nome);
+                    setMicros((v) => v.map((x, n) => n === i ? { ...x, nome, unidade: novoCodigo ? CATALOGO_MICRO[novoCodigo][1] : x.unidade } : x));
+                  }} />
+                </Campo>
+                <Campo label="Meta por dia">
+                  <Input type="number" min="0" step="any" value={m.meta} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, meta: e.target.value } : x))} />
+                </Campo>
+                <Campo label="Unidade">
+                  <Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value } : x))}>
+                    <option>mg</option><option>µg</option><option>g</option>
+                  </Select>
+                </Campo>
+                {rascunho ? <Button type="button" variant="ghost" onClick={() => setMicros((v) => v.filter((_, n) => n !== i))}>Remover</Button> : null}
+              </div>
+              {total && (total.medidos + total.tracos + total.semDados > 0) ? (
+                <p className="mt-2 text-sm text-ink-2">
+                  {total.medidos
+                    ? `${total.tracos || total.semDados ? "Total parcial" : "Total diário"}: ${fmtNum(total.total, 2)} ${unidadeTabela}`
+                    : total.tracos ? "Sem valor quantificado" : "Sem dados de composição"}
+                  {total.tracos ? ` · ${total.tracos} com traços` : ""}
+                  {total.semDados ? ` · ${total.semDados} sem dados` : ""}
+                </p>
+              ) : m.nome ? <p className="mt-2 text-sm text-muted">{codigo ? "Adicione alimentos para calcular o total." : "Sem referência de composição na TACO."}</p> : null}
+            </div>
+          );
+        })}
         {rascunho ? <Button type="button" variant="sand" onClick={() => setMicros((v) => [...v, { nome: "", unidade: "mg", meta: "" }])}>Adicionar micronutriente</Button> : null}
       </div>
       <div className="mt-4 flex flex-col gap-3">
@@ -919,6 +960,7 @@ function Editor({
           <RefeicaoCard
             key={ref.id}
             refeicao={ref}
+            microsEscolhidos={microsEscolhidos}
             prescricaoId={plano.id}
             rascunho={rascunho}
             onChange={(nova) => setRefs((lista) => lista.map((r, i) => (i === idx ? nova : r)))}
@@ -968,12 +1010,14 @@ function Barra({ rotulo, valor, meta, unidade }: { rotulo: string; valor: number
 
 function RefeicaoCard({
   refeicao,
+  microsEscolhidos,
   prescricaoId,
   rascunho,
   onChange,
   onMudou,
 }: {
   refeicao: Refeicao;
+  microsEscolhidos: CodigoMicro[];
   prescricaoId: number;
   rascunho: boolean;
   onChange: (r: Refeicao) => void;
@@ -995,6 +1039,14 @@ function RefeicaoCard({
               <span className="block tabular-nums text-muted">
                 {fmtNum(item.gramas, 0)} g · {fmtNum(item.kcal, 0)} kcal · PTN {fmtNum(item.ptn, 1)} · CHO {fmtNum(item.cho, 1)} · LIP {fmtNum(item.lip, 1)}
               </span>
+              {microsEscolhidos.length ? <span className="block text-muted">
+                {microsEscolhidos.map((codigo) => {
+                  const [nome, unidade] = CATALOGO_MICRO[codigo];
+                  const valor = item.composicaoMicro?.[codigo];
+                  const texto = typeof valor === "number" ? `${fmtNum(valor, 2)} ${unidade}` : valor === "Tr" ? "traços" : "sem dado";
+                  return `${nome}: ${texto}`;
+                }).join(" · ")}
+              </span> : null}
             </span>
             {rascunho ? (
               <button
@@ -1035,6 +1087,7 @@ function BuscaAlimento({
   onMudou: () => Promise<void>;
 }) {
   const [q, setQ] = useState("");
+  const [somenteTaco, setSomenteTaco] = useState(false);
   const [lista, setLista] = useState<AlimentoBusca[]>([]);
   const [escolhido, setEscolhido] = useState<AlimentoBusca | null>(null);
   const [medida, setMedida] = useState("Grama");
@@ -1047,13 +1100,14 @@ function BuscaAlimento({
       setLista([]);
       return;
     }
+    let cancelado = false;
     const t = setTimeout(() => {
-      buscarAlimentos({ data: { q } })
-        .then(setLista)
-        .catch(() => setLista([]));
+      buscarAlimentos({ data: { q, somenteTaco } })
+        .then((dados) => { if (!cancelado) setLista(dados); })
+        .catch(() => { if (!cancelado) setLista([]); });
     }, 200);
-    return () => clearTimeout(t);
-  }, [q]);
+    return () => { cancelado = true; clearTimeout(t); };
+  }, [q, somenteTaco]);
 
   const medidas = escolhido ? [["Grama", 1] as [string, number], ...escolhido.m] : [["Grama", 1] as [string, number]];
 
@@ -1069,6 +1123,7 @@ function BuscaAlimento({
           medida,
           qtd: Number(qtd.replace(",", ".")),
           confirmarAlergia: confirmar,
+          somenteTaco,
         },
       });
       if (res.alerta) {
@@ -1088,6 +1143,15 @@ function BuscaAlimento({
   return (
     <div className="mt-3">
       <Input value={q} onChange={(e) => { setQ(e.target.value); setEscolhido(null); }} placeholder="Buscar alimento (IBGE e TACO)" aria-label="Buscar alimento" />
+      <label className="mt-2 flex min-h-9 items-center gap-2 text-sm text-ink-2">
+        <input type="checkbox" checked={somenteTaco} onChange={(e) => {
+          setSomenteTaco(e.target.checked);
+          setEscolhido(null);
+          setAlerta(null);
+          setLista([]);
+        }} />
+        Buscar apenas na TACO
+      </label>
       {lista.length > 0 && !escolhido ? (
         <ul className="mt-1 max-h-48 overflow-auto rounded-lg border border-line bg-paper">
           {lista.map((a) => (
@@ -1103,7 +1167,7 @@ function BuscaAlimento({
                 }}
               >
                 {a.n}
-                <span className="block text-muted">{a.g} · {fmtNum(a.k, 0)} kcal/100 g</span>
+                <span className="block text-muted">{a.g} · {fmtNum(a.k, 0)} kcal/100 g{a.composicaoMicro100 && Object.keys(a.composicaoMicro100).length ? " · Micronutrientes TACO" : ""}</span>
               </button>
             </li>
           ))}

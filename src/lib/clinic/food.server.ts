@@ -1,9 +1,19 @@
 import raw from "../../data/alimentos.json";
+import taco from "../../data/taco-micronutrientes.json";
+import type { ComposicaoMicro } from "./composicao-micro";
 import { semAcento } from "./calc";
 import type { AlimentoBusca } from "./types";
 
-const lista = raw as AlimentoBusca[];
+// TACO, NEPA/Unicamp, 4ª edição (2011). Junção pelo número da Tabela 1.
+const tacoPorId: Record<string, ComposicaoMicro> = taco as Record<string, ComposicaoMicro>;
+const lista: AlimentoBusca[] = raw.map((alimento) => ({
+  ...alimento,
+  m: alimento.m as AlimentoBusca["m"],
+  n: alimento.id === "T0540" && alimento.n === "L" ? "Feijoada" : alimento.n,
+  composicaoMicro100: tacoPorId[alimento.id],
+}));
 const porId = new Map(lista.map((a) => [a.id, a]));
+const listaTaco = lista.filter((alimento) => alimento.composicaoMicro100 !== undefined);
 
 export const QTD_BASE = lista.length;
 
@@ -15,8 +25,8 @@ export function alimentoNaLista(origem: readonly AlimentoBusca[], id: string): A
   return origem.find((a) => a.id === id);
 }
 
-export function buscarAlimentos(q: string, limite = 12): AlimentoBusca[] {
-  return buscarNaLista(lista, q, limite);
+export function buscarAlimentos(q: string, limite = 12, somenteTaco = false): AlimentoBusca[] {
+  return buscarNaLista(somenteTaco ? listaTaco : lista, q, limite);
 }
 
 export function buscarNaLista(origem: readonly AlimentoBusca[], q: string, limite = 12): AlimentoBusca[] {

@@ -1,3 +1,4 @@
+import type { ComposicaoMicro } from "./composicao-micro";
 import type { CampoModelo } from "./catalogo";
 
 export type Clinica = {
@@ -95,6 +96,7 @@ export type ItemPlano = {
   cho: number;
   lip: number;
   fibra: number;
+  composicaoMicro?: ComposicaoMicro;
 };
 
 export type Refeicao = {
@@ -215,6 +217,7 @@ export type ItemModelo = {
   cho: number;
   lip: number;
   fibra: number;
+  composicaoMicro?: ComposicaoMicro;
 };
 
 export type RefeicaoModelo = {
@@ -367,4 +370,5 @@ export type AlimentoBusca = {
   c: number;
   f: number;
   m: Array<[string, number]>;
+  composicaoMicro100?: ComposicaoMicro;
 };
