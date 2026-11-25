@@ -1,4 +1,5 @@
-import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, FONTE_IBGE, LINK_IBGE, codigoMicronutriente, somarMicronutriente, type CodigoMicro, type FonteAlimento } from "@/lib/clinic/composicao-micro";
+import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, FONTE_IBGE, LINK_IBGE, codigoMicronutriente, converterUnidade, somarMicronutriente, tipoPadraoMeta, valorMicro, type CodigoMicro, type FonteAlimento, type TipoMeta } from "@/lib/clinic/composicao-micro";
+import type { ContextoMicro } from "@/lib/clinic/perfis-micro";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
@@ -27,8 +28,8 @@ import {
   mifflin,
   sugerirKcal,
 } from "@/lib/clinic/calc";
-import type { AlimentoBusca, Avaliacao, Prescricao, Prontuario, Refeicao } from "@/lib/clinic/types";
-import { editarMetasMicro, MetasMicroEditor, ResumoMicronutrientes, validarMetasMicro } from "./micronutrientes-view";
+import type { AlimentoBusca, Avaliacao, Paciente, Prescricao, Prontuario, Refeicao } from "@/lib/clinic/types";
+import { AvisoFonteMicro, BarraMicro, editarMetasMicro, MetasMicroEditor, ResumoMicronutrientes, SugestaoMicros, validarMetasMicro } from "./micronutrientes-view";
 import { EvolucaoPainel } from "./evolucao-view";
 import { EntregaPlano } from "./entrega-view";
 import { ExamesPainel } from "./exames-view";
@@ -521,7 +522,19 @@ function FormAvaliacao({ prontuario, onSalvo }: { prontuario: Prontuario; onSalv
           </div>
         ) : null}
         <div className="md:col-span-3">
-          <MetasMicroEditor metas={micros} onChange={setMicros} />
+          <MetasMicroEditor
+            metas={micros}
+            onChange={setMicros}
+            contexto={{
+              sexo: p.sexo,
+              idade: p.idade,
+              objetivo: p.objetivo,
+              patologias: p.patologias,
+              medicamentos: p.medicamentos,
+              kcal: Number(kcal) || ultima?.kcalMeta,
+              gestanteOuLactante: gestante === "Sim" || lactante === "Sim",
+            }}
+          />
         </div>
         <div className="md:col-span-3">
           <Erro>{erro}</Erro>
@@ -614,7 +627,7 @@ function PainelCardapio({ prontuario, onMudou }: { prontuario: Prontuario; onMud
               Visualizar
             </Button>
           </div>
-          <Editor plano={plano} avaliacao={prontuario.avaliacoes[0]} onMudou={onMudou} onNova={setSel} onPrevia={() => setVer(true)} />
+          <Editor plano={plano} avaliacao={prontuario.avaliacoes[0]} paciente={prontuario.paciente} onMudou={onMudou} onNova={setSel} onPrevia={() => setVer(true)} />
           {ver ? <Folha prontuario={prontuario} plano={plano} onFechar={() => setVer(false)} /> : null}
         </>
       ) : (
@@ -772,9 +785,11 @@ function Editor({
   onNova,
   onPrevia,
   avaliacao,
+  paciente,
 }: {
   plano: Prescricao;
   avaliacao?: Avaliacao;
+  paciente: Paciente;
   onPrevia: () => void;
   onMudou: () => Promise<void>;
   onNova: (id: number) => void;
@@ -795,6 +810,15 @@ function Editor({
   const totais = soma({ ...plano, refeicoes: refs });
   const itensCardapio = refs.flatMap((ref) => ref.itens);
   const microsEscolhidos = [...new Set(micros.map((m) => codigoMicronutriente(m.nome)).filter((codigo) => codigo !== undefined))];
+  const contextoMicro: ContextoMicro = {
+    sexo: paciente.sexo,
+    idade: paciente.idade,
+    objetivo: paciente.objetivo,
+    patologias: paciente.patologias,
+    medicamentos: paciente.medicamentos,
+    kcal: Number(kcal) || plano.kcalMeta,
+    gestanteOuLactante: avaliacao?.gestante === "Sim" || avaliacao?.lactante === "Sim",
+  };
 
   const assinatura = plano.refeicoes.map((r) => r.itens.map((i) => i.id).join(",")).join("|");
 
@@ -920,6 +944,7 @@ function Editor({
         <p className="mt-1 text-sm text-muted">
           Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a> e do <a className="underline" href={LINK_IBGE} target="_blank" rel="noreferrer">{FONTE_IBGE}</a>.
         </p>
+        {rascunho ? <SugestaoMicros metas={micros} onChange={setMicros} contexto={contextoMicro} /> : null}
         <datalist id="micronutrientes-catalogo">
           {CODIGOS_MICRO.map((codigo) => <option key={codigo} value={CATALOGO_MICRO[codigo][0]} />)}
         </datalist>
@@ -929,12 +954,12 @@ function Editor({
           const unidadeTabela = codigo ? CATALOGO_MICRO[codigo][1] : "";
           return (
             <div key={i} className="mt-3 rounded-lg border border-line p-3">
-              <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_auto]">
+              <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_7rem_auto]">
                 <Campo label="Nutriente">
                   <Input list="micronutrientes-catalogo" value={m.nome} disabled={!rascunho} placeholder="Ex.: Cálcio" onChange={(e) => {
                     const nome = e.target.value;
                     const novoCodigo = codigoMicronutriente(nome);
-                    setMicros((v) => v.map((x, n) => n === i ? { ...x, nome, unidade: novoCodigo ? CATALOGO_MICRO[novoCodigo][1] : x.unidade } : x));
+                    setMicros((v) => v.map((x, n) => n === i ? { ...x, nome, unidade: novoCodigo ? CATALOGO_MICRO[novoCodigo][1] : x.unidade, tipo: novoCodigo ? tipoPadraoMeta(novoCodigo) : x.tipo } : x));
                   }} />
                 </Campo>
                 <Campo label="Meta por dia">
@@ -945,19 +970,35 @@ function Editor({
                     <option>mg</option><option>µg</option><option>g</option>
                   </Select>
                 </Campo>
+                <Campo label="A meta é">
+                  <Select value={m.tipo ?? tipoPadraoMeta(codigo)} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, tipo: e.target.value as TipoMeta } : x))}>
+                    <option value="minimo">Mínimo</option><option value="teto">Teto</option>
+                  </Select>
+                </Campo>
                 {rascunho ? <Button type="button" variant="ghost" onClick={() => setMicros((v) => v.filter((_, n) => n !== i))}>Remover</Button> : null}
               </div>
               {total && (total.medidos + total.tracos + total.semDados > 0) ? (
-                <p className="mt-2 text-sm text-ink-2">
-                  {total.medidos
-                    ? `${total.tracos || total.semDados ? "Total parcial" : "Total diário"}: ${fmtNum(total.total, 2)} ${unidadeTabela}`
-                    : total.tracos ? "Sem valor quantificado" : "Sem dados de composição"}
-                  {total.tracos ? ` · ${total.tracos} com traços` : ""}
-                  {total.semDados ? ` · ${total.semDados} sem dados` : ""}
-                </p>
+                <>
+                  <p className="mt-2 text-sm text-ink-2">
+                    {total.medidos
+                      ? `${total.tracos || total.semDados ? "Total parcial" : "Total diário"}: ${fmtNum(total.total, 2)} ${unidadeTabela}`
+                      : total.tracos ? "Sem valor quantificado" : "Sem dados de composição"}
+                    {total.tracos ? ` · ${total.tracos} com traços` : ""}
+                    {total.semDados ? ` · ${total.semDados} sem dados` : ""}
+                  </p>
+                  {Number(m.meta) > 0 ? (
+                    <BarraMicro
+                      total={{ ...total, total: converterUnidade(total.total, unidadeTabela, m.unidade) }}
+                      meta={Number(m.meta)}
+                      unidade={m.unidade}
+                      tipo={m.tipo ?? tipoPadraoMeta(codigo)}
+                    />
+                  ) : null}
+                </>
               ) : m.nome ? <p className="mt-2 text-sm text-muted">{codigo ? "Adicione alimentos para calcular o total." : "Sem referência de composição nas tabelas disponíveis."}</p> : null}
-              {codigo === "sodio" || codigo === "sodio_adicao" ? (
-                <p className="mt-1 text-sm text-muted">O IBGE informa o sódio de adição em uma coluna separada. A soma segue a coluna selecionada.</p>
+              <AvisoFonteMicro nome={m.nome} />
+              {codigo === "sodio_total" ? (
+                <p className="mt-1 text-sm text-muted">Soma o sódio do alimento e o sódio de adição (sal do preparo) que o IBGE informa em colunas separadas. Na TACO o sódio já é o total.</p>
               ) : null}
             </div>
           );
@@ -1051,7 +1092,7 @@ function RefeicaoCard({
               {microsEscolhidos.length ? <span className="block text-muted">
                 {microsEscolhidos.map((codigo) => {
                   const [nome, unidade] = CATALOGO_MICRO[codigo];
-                  const valor = item.composicaoMicro?.[codigo];
+                  const valor = valorMicro(item.composicaoMicro, codigo);
                   const texto = typeof valor === "number" ? `${fmtNum(valor, 2)} ${unidade}` : valor === "Tr" ? "traços" : "sem dado";
                   return `${nome}: ${texto}`;
                 }).join(" · ")}

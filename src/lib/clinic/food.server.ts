@@ -4,15 +4,24 @@ import ibge1 from "../../data/ibge-micronutrientes-1.json";
 import ibge2 from "../../data/ibge-micronutrientes-2.json";
 import ibge3 from "../../data/ibge-micronutrientes-3.json";
 import ibge4 from "../../data/ibge-micronutrientes-4.json";
+import ibgeGorduras from "../../data/ibge-lipidios-acucar.json";
+import tacoGorduras from "../../data/taco-lipidios.json";
 import type { ComposicaoMicro, FonteAlimento } from "./composicao-micro";
 import { semAcento } from "./calc";
 import type { AlimentoBusca } from "./types";
 
 // TACO, NEPA/Unicamp, 4ª edição (2011). Junção pelo número da Tabela 1.
-const tacoPorId: Record<string, ComposicaoMicro> = taco as Record<string, ComposicaoMicro>;
+const tacoGordurasPorId = tacoGorduras as Record<string, ComposicaoMicro>;
+const ibgeGordurasPorId = ibgeGorduras as Record<string, ComposicaoMicro>;
+const unir = (base: Record<string, ComposicaoMicro>, extra: Record<string, ComposicaoMicro>) => {
+  const saida: Record<string, ComposicaoMicro> = { ...base };
+  for (const [id, valores] of Object.entries(extra)) saida[id] = { ...saida[id], ...valores };
+  return saida;
+};
+const tacoPorId: Record<string, ComposicaoMicro> = unir(taco as Record<string, ComposicaoMicro>, tacoGordurasPorId);
 // IBGE, POF 2008–2009. As chaves P são as linhas da planilha oficial,
 // conferidas pelo nome, preparação e cinco valores de composição já no catálogo.
-const ibgePorId: Record<string, ComposicaoMicro> = { ...ibge1, ...ibge2, ...ibge3, ...ibge4 };
+const ibgePorId: Record<string, ComposicaoMicro> = unir({ ...ibge1, ...ibge2, ...ibge3, ...ibge4 } as Record<string, ComposicaoMicro>, ibgeGordurasPorId);
 const lista: AlimentoBusca[] = raw.map((alimento) => ({
   ...alimento,
   m: alimento.m as AlimentoBusca["m"],

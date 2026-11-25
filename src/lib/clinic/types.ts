@@ -109,7 +109,7 @@ export type Refeicao = {
   itens: ItemPlano[];
 };
 
-export type MetaMicronutriente = { nome: string; unidade: "mg" | "µg" | "g"; meta: number };
+export type MetaMicronutriente = { nome: string; unidade: "mg" | "µg" | "g"; meta: number; tipo?: "minimo" | "teto" };
 
 export type Prescricao = {
   id: number;

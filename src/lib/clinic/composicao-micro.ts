@@ -13,7 +13,7 @@ export const CATALOGO_MICRO = {
   manganes: ["Manganês", "mg"],
   fosforo: ["Fósforo", "mg"],
   ferro: ["Ferro", "mg"],
-  sodio: ["Sódio", "mg"],
+  sodio: ["Sódio sem sal de adição", "mg"],
   sodio_adicao: ["Sódio de adição (IBGE)", "mg"],
   potassio: ["Potássio", "mg"],
   cobre: ["Cobre", "mg"],
@@ -31,7 +31,34 @@ export const CATALOGO_MICRO = {
   vitamina_d: ["Vitamina D", "µg"],
   vitamina_e: ["Vitamina E (alfa-tocoferol)", "mg"],
   vitamina_c: ["Vitamina C", "mg"],
+  colesterol: ["Colesterol", "mg"],
+  ag_saturados: ["Gordura saturada", "g"],
+  ag_monoinsaturados: ["Gordura monoinsaturada", "g"],
+  ag_poliinsaturados: ["Gordura poli-insaturada", "g"],
+  ag_trans: ["Gordura trans", "g"],
+  acucar_total: ["Açúcar total", "g"],
+  acucar_adicao: ["Açúcar de adição", "g"],
+  sodio_total: ["Sódio", "mg"],
 } as const;
+
+// Calculado na hora, nunca gravado: no IBGE o sódio de adição vem em coluna separada do sódio do alimento.
+export const CODIGOS_DERIVADOS = ["sodio_total"] as const;
+const COMPONENTES_DERIVADOS: Record<string, readonly CodigoMicro[]> = { sodio_total: ["sodio", "sodio_adicao"] };
+
+// Nutrientes que têm limite máximo (teto) em vez de mínimo a atingir.
+const CODIGOS_TETO: readonly CodigoMicro[] = [
+  "sodio", "sodio_adicao", "sodio_total", "colesterol", "ag_saturados", "ag_trans", "acucar_adicao",
+];
+export type TipoMeta = "minimo" | "teto";
+
+// A TACO não traz estes nutrientes: no cardápio, só os alimentos do IBGE entram no total.
+export const SO_NO_IBGE: readonly CodigoMicro[] = [
+  "selenio", "niacina_ne", "vitamina_b12", "folato_dfe", "vitamina_d", "vitamina_e",
+  "sodio_adicao", "ag_trans", "acucar_total", "acucar_adicao",
+];
+export function tipoPadraoMeta(codigo?: CodigoMicro): TipoMeta {
+  return codigo && CODIGOS_TETO.includes(codigo) ? "teto" : "minimo";
+}
 
 export type CodigoMicro = keyof typeof CATALOGO_MICRO;
 export type ComposicaoMicro = Partial<Record<CodigoMicro, number | "Tr">>;
@@ -48,6 +75,11 @@ const aliases: Record<string, CodigoMicro> = {
   folato: "folato_dfe", "vitamina b9": "folato_dfe",
   "vitamina e": "vitamina_e",
   "sodio de adicao": "sodio_adicao",
+  "acidos graxos saturados": "ag_saturados", "gordura saturada total": "ag_saturados",
+  "acidos graxos monoinsaturados": "ag_monoinsaturados",
+  "acidos graxos poliinsaturados": "ag_poliinsaturados", "gordura poliinsaturada": "ag_poliinsaturados",
+  "acidos graxos trans": "ag_trans",
+  "acucar de adicao": "acucar_adicao", "acucar adicionado": "acucar_adicao",
 };
 
 export function codigoMicronutriente(nome: string) {
@@ -78,12 +110,47 @@ export function composicaoMicroPorPorcao(base: ComposicaoMicro, gramas: number):
   return porcao;
 }
 
+const FATOR_UNIDADE: Record<string, number> = { "µg": 1, mg: 1000, g: 1000000 };
+export function converterUnidade(valor: number, de: string, para: string) {
+  const a = FATOR_UNIDADE[de];
+  const b = FATOR_UNIDADE[para];
+  return a && b ? (valor * a) / b : valor;
+}
+
+export function ehDerivado(codigo: CodigoMicro) {
+  return (CODIGOS_DERIVADOS as readonly string[]).includes(codigo);
+}
+
+// Códigos gravados que precisam acompanhar o item para o valor derivado poder ser calculado.
+export function codigosNecessarios(codigos: Iterable<CodigoMicro | undefined>): Set<CodigoMicro> {
+  const saida = new Set<CodigoMicro>();
+  for (const codigo of codigos) {
+    if (!codigo) continue;
+    saida.add(codigo);
+    for (const base of COMPONENTES_DERIVADOS[codigo] ?? []) saida.add(base);
+  }
+  return saida;
+}
+
+// Valor de um nutriente numa composição. O sódio total soma o sódio do alimento ao sódio de adição (IBGE);
+// na TACO o sódio já é o total medido no alimento preparado.
+export function valorMicro(composicao: ComposicaoMicro | undefined, codigo: CodigoMicro): number | "Tr" | undefined {
+  if (!composicao) return undefined;
+  if (codigo !== "sodio_total") return composicao[codigo];
+  const base = composicao.sodio;
+  const adicao = composicao.sodio_adicao;
+  if (base === undefined && adicao === undefined) return undefined;
+  const soma = (typeof base === "number" ? base : 0) + (typeof adicao === "number" ? adicao : 0);
+  if (soma === 0 && (base === "Tr" || adicao === "Tr")) return "Tr";
+  return soma;
+}
+
 export function somarMicronutriente(itens: readonly { composicaoMicro?: ComposicaoMicro }[], codigo: CodigoMicro) {
   let total = 0;
   let medidos = 0;
   let tracos = 0;
   for (const item of itens) {
-    const dado = item.composicaoMicro?.[codigo];
+    const dado = valorMicro(item.composicaoMicro, codigo);
     if (dado === "Tr") tracos++;
     if (typeof dado === "number") {
       total += dado;
@@ -100,6 +167,8 @@ export function lerMetasMicro(valor: unknown): MetaMicronutriente[] {
     const { nome, unidade, meta: quantidade } = meta;
     if (typeof nome !== "string" || !nome.trim() || !["mg", "µg", "g"].includes(unidade)) return [];
     if (typeof quantidade !== "number" || !Number.isFinite(quantidade) || quantidade <= 0 || quantidade > 1000000) return [];
-    return [{ nome: nome.trim().slice(0, 80), unidade, meta: quantidade }];
+    const { tipo } = meta as { tipo?: unknown };
+    const base = { nome: nome.trim().slice(0, 80), unidade, meta: quantidade };
+    return [tipo === "minimo" || tipo === "teto" ? { ...base, tipo } : base];
   });
 }

@@ -1,4 +1,4 @@
-import { codigoMicronutriente, lerComposicaoMicro, lerMetasMicro, type ComposicaoMicro } from "./composicao-micro";
+import { codigoMicronutriente, codigosNecessarios, lerComposicaoMicro, lerMetasMicro, type ComposicaoMicro } from "./composicao-micro";
 import { getSql } from "@/lib/db";
 import type { CapaPlano, ItemPlano, PlanoAberto, Prescricao, Refeicao, RefeicaoDieta } from "./types";
 
@@ -117,7 +117,7 @@ export async function planoDoToken(token: string, confirmacao: { nascimento: str
   if (cap) {
     const presId = num(cap.id);
     const metasMicro = lerMetasMicro(cap.micronutrientes);
-    const codigos = new Set(metasMicro.map((m) => codigoMicronutriente(m.nome)));
+    const codigos = codigosNecessarios(metasMicro.map((m) => codigoMicronutriente(m.nome)));
     const refs = await sql<Record<string, unknown>>`
       select * from refeicoes where user_id = ${userId} and prescricao_id = ${presId} order by ordem, id
     `;

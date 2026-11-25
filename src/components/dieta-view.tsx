@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { criarCardapio, excluirDieta, salvarDieta } from "@/lib/clinic/api";
 import { fmtData, fmtNum } from "@/lib/clinic/calc";
-import type { Dieta, Prontuario, RefeicaoDieta } from "@/lib/clinic/types";
+import type { Avaliacao, Dieta, Paciente, Prontuario, RefeicaoDieta } from "@/lib/clinic/types";
 import { editarMetasMicro, MetasMicroEditor, validarMetasMicro } from "./micronutrientes-view";
 import { Button, Campo, Cartao, Erro, Input, Select, Textarea } from "./ui";
 
@@ -64,6 +64,8 @@ export function DietaPainel({
         base={dieta ?? rascunho(prontuario)}
         modelos={prontuario.modelosDieta}
         pacienteId={prontuario.paciente.id}
+        paciente={prontuario.paciente}
+        avaliacao={prontuario.avaliacoes[0]}
         onMudou={onMudou}
         onSalvo={(id) => setSel(id)}
         onIr={onIr}
@@ -76,6 +78,8 @@ function Editor({
   base,
   modelos,
   pacienteId,
+  paciente,
+  avaliacao,
   onMudou,
   onSalvo,
   onIr,
@@ -83,6 +87,8 @@ function Editor({
   base: Omit<Dieta, "id"> & { id?: number };
   modelos: Dieta[];
   pacienteId: number;
+  paciente: Paciente;
+  avaliacao?: Avaliacao;
   onMudou: () => Promise<void>;
   onSalvo: (id: number | "nova") => void;
   onIr: (aba: "cardapio") => void;
@@ -214,7 +220,19 @@ function Editor({
           {fmtNum((carbN * 4 * 100) / vet, 0)}%, lipídio {fmtNum((lipN * 9 * 100) / vet, 0)}%.
         </p>
       ) : null}
-      <MetasMicroEditor metas={micros} onChange={setMicros} />
+      <MetasMicroEditor
+        metas={micros}
+        onChange={setMicros}
+        contexto={{
+          sexo: paciente.sexo,
+          idade: paciente.idade,
+          objetivo: paciente.objetivo,
+          patologias: paciente.patologias,
+          medicamentos: paciente.medicamentos,
+          kcal: Number(kcal) || undefined,
+          gestanteOuLactante: avaliacao?.gestante === "Sim" || avaliacao?.lactante === "Sim",
+        }}
+      />
       <h3 className="mt-6 font-serif text-xl">Refeições</h3>
       <div className="mt-3 flex flex-col gap-4">
         {refeicoes.map((r, i) => (

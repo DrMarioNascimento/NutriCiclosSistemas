@@ -979,6 +979,7 @@ const metasMicroInput = z.array(z.object({
   nome: z.string().trim().min(1).max(80),
   unidade: z.enum(["mg", "µg", "g"]),
   meta: z.number().positive().max(1000000),
+  tipo: z.enum(["minimo", "teto"]).optional(),
 })).max(30).optional();
 
 const avaliacaoInput = z.object({
