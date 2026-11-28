@@ -1,4 +1,6 @@
+import { somarMacros } from "@/lib/clinic/apresentacao-micro";
 import { ResumoMicronutrientes } from "./micronutrientes-view";
+import { PainelMacros } from "./painel-nutrientes";
 import { useEffect, useState, type FormEvent } from "react";
 import { confirmarPlano, lerPlanoPublico } from "@/lib/clinic/api";
 import { fmtData, fmtNum } from "@/lib/clinic/calc";
@@ -124,9 +126,11 @@ export function PlanoPublico({ token }: { token: string }) {
             {cardapio.titulo} · {fmtData(cardapio.data)}
             {cardapio.retornoEm ? ` · retorno ${fmtData(cardapio.retornoEm)}` : ""}
           </p>
-          <p className="mt-4 text-sm tabular-nums">
-            Meta {fmtNum(cardapio.kcalMeta, 0)} kcal · proteína {fmtNum(cardapio.protMeta, 0)} g · carboidrato {fmtNum(cardapio.carbMeta, 0)} g · gordura {fmtNum(cardapio.lipMeta, 0)} g
-          </p>
+          <PainelMacros
+            titulo="O seu dia em números"
+            totais={somarMacros(cardapio.refeicoes)}
+            metas={{ kcal: cardapio.kcalMeta, ptn: cardapio.protMeta, cho: cardapio.carbMeta, lip: cardapio.lipMeta, fibra: cardapio.fibraMeta }}
+          />
           {cardapio.refeicoes.map((ref) => (
             <section key={ref.id} className="mt-6">
               <h2 className="font-serif text-xl">
@@ -164,7 +168,7 @@ export function PlanoPublico({ token }: { token: string }) {
         </section>
       ) : null}
       {dieta?.observacoes ? <p className="mt-6 text-sm text-ink-2">{dieta.observacoes}</p> : null}
-      <p className="mt-10 text-xs text-muted">
+      <p className="mt-10 text-xs text-ink-2">
         Orientação de {plano.clinica.nutricionista}
         {plano.clinica.crn ? `, ${plano.clinica.crn}` : ""}. Não substitui o acompanhamento.
         {plano.clinica.contato ? ` ${plano.clinica.contato}` : ""}

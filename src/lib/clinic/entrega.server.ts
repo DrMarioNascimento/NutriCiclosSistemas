@@ -165,6 +165,7 @@ export async function planoDoToken(token: string, confirmacao: { nascimento: str
       protMeta: num(cap.prot_meta),
       carbMeta: num(cap.carb_meta),
       lipMeta: num(cap.lip_meta),
+      fibraMeta: cap.fibra_meta == null ? null : num(cap.fibra_meta),
       hidratacao: txt(cap.hidratacao),
       emitidaEm: cap.emitida_em ? String(cap.emitida_em) : null,
       micronutrientes: metasMicro,

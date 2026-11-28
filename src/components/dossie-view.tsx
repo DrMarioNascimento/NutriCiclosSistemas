@@ -1,4 +1,5 @@
 import { ResumoMicronutrientes } from "./micronutrientes-view";
+import { MetasMacroChips } from "./painel-nutrientes";
 import { useState } from "react";
 import { fmtCpf, fmtData, fmtNum } from "@/lib/clinic/calc";
 import type { Prontuario } from "@/lib/clinic/types";
@@ -110,8 +111,9 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
           <p className="mt-1 tabular-nums">
             TMB {fmtNum(aval.tmb, 0)} · GET {fmtNum(aval.get, 0)} · meta {fmtNum(aval.kcalMeta, 0)} kcal · sugestão {fmtNum(aval.sugeridaKcal, 0)} kcal
           </p>
+          <MetasMacroChips ptn={aval.protMeta} cho={aval.carbMeta} lip={aval.lipMeta} />
           <p className="mt-1">
-            PTN {fmtNum(aval.protMeta, 0)} g · CHO {fmtNum(aval.carbMeta, 0)} g · LIP {fmtNum(aval.lipMeta, 0)} g · {aval.atividade}
+            {aval.atividade}
             {aval.equipamento ? ` · ${aval.equipamento}` : ""}
           </p>
           {antiga && antiga.id !== aval.id ? (
@@ -129,9 +131,7 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
         <section>
           <h3 className="font-serif text-xl">Dieta · {dieta.nome}</h3>
           {dieta.indicacao ? <p className="mt-1">{dieta.indicacao}</p> : null}
-          <p className="mt-1 tabular-nums">
-            {fmtNum(dieta.kcalMeta, 0)} kcal · PTN {fmtNum(dieta.protMeta, 0)} g · CHO {fmtNum(dieta.carbMeta, 0)} g · LIP {fmtNum(dieta.lipMeta, 0)} g
-          </p>
+          <MetasMacroChips kcal={dieta.kcalMeta} ptn={dieta.protMeta} cho={dieta.carbMeta} lip={dieta.lipMeta} />
           {trocas.map((r) => (
             <p key={`${r.nome}-${r.hora}`} className="mt-1">
               {r.hora ? `${r.hora} · ` : ""}
@@ -157,7 +157,7 @@ function DossieCorpo({ prontuario }: { prontuario: Prontuario }) {
               {ref.nome}: {ref.itens.map((i) => i.alimentoNome).join(", ") || "sem alimentos"}
             </p>
           ))}
-          <ResumoMicronutrientes metas={emitido.micronutrientes} itens={emitido.refeicoes.flatMap((ref) => ref.itens)} />
+          <ResumoMicronutrientes variante="documento" metas={emitido.micronutrientes} itens={emitido.refeicoes.flatMap((ref) => ref.itens)} />
         </section>
       ) : (
         <p>Nenhum cardápio emitido. Rascunho não entra no dossiê como prescrição.</p>

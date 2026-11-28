@@ -164,3 +164,52 @@ export function montarSugestao(perfil: PerfilMicro, contexto: ContextoMicro, jaE
   }
   return novas;
 }
+
+// ---- Vários perfis ao mesmo tempo (ex.: hipertensão + menopausa) ----
+
+/** Todos os perfis que combinam com o cadastro, na ordem da lista. */
+export function perfisSugeridos(contexto: ContextoMicro): PerfilMicro[] {
+  const texto = semAcentoMinusculo(`${contexto.objetivo ?? ""} ${contexto.patologias ?? ""} ${contexto.medicamentos ?? ""} `);
+  return PERFIS_MICRO.filter((perfil) => perfil.palavras.some((p) => new RegExp(`\\b${p}${p.length <= 4 ? "\\b" : ""}`).test(texto)));
+}
+
+/** Junta os nutrientes de vários perfis sem repetir. Nos tetos vale o mais rígido entre os perfis. */
+export function montarSugestaoMulti(perfis: readonly PerfilMicro[], contexto: ContextoMicro, jaEscolhidos: readonly string[]) {
+  const existentes = new Set(jaEscolhidos.map((nome) => semAcentoMinusculo(nome).trim()));
+  const vistos = new Set<CodigoMicro>();
+  const novas: Array<Omit<MetaMicronutriente, "meta"> & { meta: string }> = [];
+  for (const perfil of perfis) {
+    for (const codigo of perfil.nutrientes) {
+      if (vistos.has(codigo)) continue;
+      vistos.add(codigo);
+      const [nome, unidade] = CATALOGO_MICRO[codigo];
+      if (existentes.has(semAcentoMinusculo(nome).trim())) continue;
+      const base = metaSugerida(codigo, contexto);
+      const tipo = tipoPadraoMeta(codigo);
+      const ajustes = perfis.map((p) => p.ajustes?.[codigo]).filter((v): v is number => v !== undefined);
+      let meta: number | undefined = base;
+      if (ajustes.length) meta = tipo === "teto" && base !== undefined ? Math.min(base, ...ajustes) : (ajustes[0] ?? base);
+      novas.push({ nome, unidade, tipo, meta: meta === undefined ? "" : String(meta) });
+    }
+  }
+  return novas;
+}
+
+const RISCO_POTASSIO = [
+  "renal", "rins", "drc", "nefro", "dialise", "hemodialise", "hipercalemia", "potassio alto",
+  "enalapril", "captopril", "lisinopril", "ramipril", "losartana", "valsartana", "candesartana", "olmesartana", "telmisartana", "irbesartana",
+  "espironolactona", "eplerenona", "amilorida", "ieca", "bra ",
+];
+
+/**
+ * Aviso para a nutricionista quando o potássio é sugerido a um paciente cujo cadastro cita rim ou remédio que retém potássio.
+ * É só um aviso: não bloqueia nem muda a meta.
+ */
+export function avisoPotassio(contexto: ContextoMicro, nutrientes: readonly CodigoMicro[]): string | null {
+  if (!nutrientes.includes("potassio")) return null;
+  const texto = semAcentoMinusculo(`${contexto.patologias ?? ""} ${contexto.medicamentos ?? ""} `);
+  const achou = RISCO_POTASSIO.some((p) => new RegExp(`\\b${p.trim()}`).test(texto));
+  return achou
+    ? "Atenção: o cadastro cita problema renal ou remédio que retém potássio. Confira se vale perseguir a meta de potássio sugerida para este paciente."
+    : null;
+}

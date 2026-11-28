@@ -1,4 +1,4 @@
-import { CATALOGO_MICRO, CODIGOS_MICRO, FONTE_TACO, LINK_TACO, FONTE_IBGE, LINK_IBGE, codigoMicronutriente, converterUnidade, somarMicronutriente, tipoPadraoMeta, valorMicro, type CodigoMicro, type FonteAlimento, type TipoMeta } from "@/lib/clinic/composicao-micro";
+import { CATALOGO_MICRO, FONTE_TACO, LINK_TACO, FONTE_IBGE, LINK_IBGE, codigoMicronutriente, valorMicro, type CodigoMicro, type FonteAlimento } from "@/lib/clinic/composicao-micro";
 import type { ContextoMicro } from "@/lib/clinic/perfis-micro";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -29,7 +29,8 @@ import {
   sugerirKcal,
 } from "@/lib/clinic/calc";
 import type { AlimentoBusca, Avaliacao, Paciente, Prescricao, Prontuario, Refeicao } from "@/lib/clinic/types";
-import { AvisoFonteMicro, BarraMicro, editarMetasMicro, MetasMicroEditor, ResumoMicronutrientes, SugestaoMicros, validarMetasMicro } from "./micronutrientes-view";
+import { editarMetasMicro, LinhaMetaMicro, MetasMicroEditor, ResumoMicronutrientes, SugestaoMicros, validarMetasMicro } from "./micronutrientes-view";
+import { MetasMacroChips, PainelMacros } from "./painel-nutrientes";
 import { EvolucaoPainel } from "./evolucao-view";
 import { EntregaPlano } from "./entrega-view";
 import { ExamesPainel } from "./exames-view";
@@ -151,7 +152,7 @@ function Resumo({ prontuario, ir }: { prontuario: Prontuario; ir: (aba: Aba) => 
         <h2 className="font-serif text-2xl">Última avaliação</h2>
         {aval ? (
           <>
-            <p className="mt-1 text-sm text-muted">{fmtData(aval.data)} · {aval.equipamento}</p>
+            <p className="mt-1 text-sm text-ink-2">{fmtData(aval.data)} · {aval.equipamento}</p>
             <dl className="mt-4 grid grid-cols-3 gap-3">
               <Dado rotulo="Peso" valor={`${fmtNum(aval.peso, 1)} kg`} />
               <Dado rotulo="IMC" valor={fmtNum(aval.imc, 1)} />
@@ -310,7 +311,7 @@ function FichaAvaliacao({ aval, objetivo }: { aval: Avaliacao; objetivo: string 
   const rcq = aval.cintura && aval.quadril ? aval.cintura / aval.quadril : null;
   return (
     <Cartao className="mt-4">
-      <p className="text-sm text-muted">{fmtData(aval.data)} · {aval.idade} anos · {aval.atividade}</p>
+      <p className="text-sm text-ink-2">{fmtData(aval.data)} · {aval.idade} anos · {aval.atividade}</p>
       <h2 className="mt-1 font-serif text-2xl">{aval.diagnostico}</h2>
       <dl className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Dado rotulo="Peso" valor={`${fmtNum(aval.peso, 1)} kg`} />
@@ -324,10 +325,8 @@ function FichaAvaliacao({ aval, objetivo }: { aval: Avaliacao; objetivo: string 
         {aval.gorduraPct != null ? <Dado rotulo="Gordura" valor={`${fmtNum(aval.gorduraPct, 1)} %`} /> : null}
         {aval.massaMuscular != null ? <Dado rotulo="Massa muscular" valor={`${fmtNum(aval.massaMuscular, 1)} kg`} /> : null}
       </dl>
-      <p className="mt-4 text-sm text-ink-2">
-        Proteína {fmtNum(aval.protMeta, 0)} g · Gordura {fmtNum(aval.lipMeta, 0)} g · Carboidrato {fmtNum(aval.carbMeta, 0)} g
-        {rcq ? ` · Cintura/quadril ${fmtNum(rcq, 2)}` : ""}
-      </p>
+      <MetasMacroChips ptn={aval.protMeta} cho={aval.carbMeta} lip={aval.lipMeta} />
+      {rcq ? <p className="mt-2 text-sm text-ink-2">Cintura/quadril {fmtNum(rcq, 2)}</p> : null}
       {aval.kcalMeta !== aval.sugeridaKcal ? (
         <p className="mt-4 rounded-lg bg-amber-soft px-4 py-3 text-sm text-amber">
           A meta gravada é {fmtNum(aval.kcalMeta, 0)} kcal. Para “{objetivo}”, a conta da clínica sugere {fmtNum(aval.sugeridaKcal, 0)} kcal.
@@ -928,82 +927,34 @@ function Editor({
         <Campo label="Meta de fibras (g/dia)"><Input type="number" min="0" value={fibra} disabled={!rascunho} onChange={(e) => setFibra(e.target.value)} /></Campo>
       </div>
       {avaliacao ? <p className="mt-3 text-sm text-ink-2">Referência da avaliação de {fmtData(avaliacao.data)}: energia sugerida {fmtNum(avaliacao.sugeridaKcal, 0)} kcal/dia; metas registradas: proteína {fmtNum(avaliacao.protMeta, 0)} g, carboidrato {fmtNum(avaliacao.carbMeta, 0)} g e gordura {fmtNum(avaliacao.lipMeta, 0)} g. Revise conforme a avaliação profissional. A referência para fibras e micronutrientes ainda deve ser definida.</p> : <p className="mt-3 text-sm text-ink-2">Sem avaliação disponível para sugerir valores. Cadastre uma avaliação e defina as metas.</p>}
-      <div className="mt-4 grid gap-2">
-        <Barra rotulo="Energia" valor={totais.kcal} meta={Number(kcal) || 0} unidade="kcal" />
-        <Barra rotulo="Proteína" valor={totais.ptn} meta={Number(prot) || 0} unidade="g" />
-        <Barra rotulo="Carboidrato" valor={totais.cho} meta={Number(cho) || 0} unidade="g" />
-        <Barra rotulo="Gordura" valor={totais.lip} meta={Number(lip) || 0} unidade="g" />
-      </div>
-      <Barra rotulo="Fibras" valor={totais.fibra} meta={Number(fibra) || 0} unidade="g" />
-      <p className="mt-2 text-sm text-muted">Valores estimados para o cardápio diário. Confira a composição dos alimentos; a ausência de informações na base pode afetar os totais.</p>
-      <div className="mt-5 rounded-xl border border-line p-4">
-        <h3 className="font-serif text-xl">Micronutrientes opcionais</h3>
+      <PainelMacros
+        titulo="Cardápio frente às metas"
+        totais={totais}
+        metas={{ kcal: Number(kcal) || 0, ptn: Number(prot) || 0, cho: Number(cho) || 0, lip: Number(lip) || 0, fibra: Number(fibra) || null }}
+      />
+      <p className="mt-2 text-sm text-ink-2">Valores estimados para o cardápio diário. Confira a composição dos alimentos; a ausência de informações na base pode afetar os totais.</p>
+      <div className="mt-5 rounded-2xl border border-line p-4">
+        <h3 className="font-serif text-2xl">Micronutrientes opcionais</h3>
         <p className="mt-1 text-sm text-ink-2">
           Escolha os nutrientes para comparar o total diário do cardápio com a meta que você definir.
         </p>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-ink-2">
           Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a> e do <a className="underline" href={LINK_IBGE} target="_blank" rel="noreferrer">{FONTE_IBGE}</a>.
         </p>
         {rascunho ? <SugestaoMicros metas={micros} onChange={setMicros} contexto={contextoMicro} /> : null}
-        <datalist id="micronutrientes-catalogo">
-          {CODIGOS_MICRO.map((codigo) => <option key={codigo} value={CATALOGO_MICRO[codigo][0]} />)}
-        </datalist>
-        {micros.map((m, i) => {
-          const codigo = codigoMicronutriente(m.nome);
-          const total = codigo ? somarMicronutriente(itensCardapio, codigo) : null;
-          const unidadeTabela = codigo ? CATALOGO_MICRO[codigo][1] : "";
-          return (
-            <div key={i} className="mt-3 rounded-lg border border-line p-3">
-              <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_7rem_auto]">
-                <Campo label="Nutriente">
-                  <Input list="micronutrientes-catalogo" value={m.nome} disabled={!rascunho} placeholder="Ex.: Cálcio" onChange={(e) => {
-                    const nome = e.target.value;
-                    const novoCodigo = codigoMicronutriente(nome);
-                    setMicros((v) => v.map((x, n) => n === i ? { ...x, nome, unidade: novoCodigo ? CATALOGO_MICRO[novoCodigo][1] : x.unidade, tipo: novoCodigo ? tipoPadraoMeta(novoCodigo) : x.tipo } : x));
-                  }} />
-                </Campo>
-                <Campo label="Meta por dia">
-                  <Input type="number" min="0" step="any" value={m.meta} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, meta: e.target.value } : x))} />
-                </Campo>
-                <Campo label="Unidade">
-                  <Select value={m.unidade} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, unidade: e.target.value as typeof m.unidade } : x))}>
-                    <option>mg</option><option>µg</option><option>g</option>
-                  </Select>
-                </Campo>
-                <Campo label="A meta é">
-                  <Select value={m.tipo ?? tipoPadraoMeta(codigo)} disabled={!rascunho} onChange={(e) => setMicros((v) => v.map((x, n) => n === i ? { ...x, tipo: e.target.value as TipoMeta } : x))}>
-                    <option value="minimo">Mínimo</option><option value="teto">Teto</option>
-                  </Select>
-                </Campo>
-                {rascunho ? <Button type="button" variant="ghost" onClick={() => setMicros((v) => v.filter((_, n) => n !== i))}>Remover</Button> : null}
-              </div>
-              {total && (total.medidos + total.tracos + total.semDados > 0) ? (
-                <>
-                  <p className="mt-2 text-sm text-ink-2">
-                    {total.medidos
-                      ? `${total.tracos || total.semDados ? "Total parcial" : "Total diário"}: ${fmtNum(total.total, 2)} ${unidadeTabela}`
-                      : total.tracos ? "Sem valor quantificado" : "Sem dados de composição"}
-                    {total.tracos ? ` · ${total.tracos} com traços` : ""}
-                    {total.semDados ? ` · ${total.semDados} sem dados` : ""}
-                  </p>
-                  {Number(m.meta) > 0 ? (
-                    <BarraMicro
-                      total={{ ...total, total: converterUnidade(total.total, unidadeTabela, m.unidade) }}
-                      meta={Number(m.meta)}
-                      unidade={m.unidade}
-                      tipo={m.tipo ?? tipoPadraoMeta(codigo)}
-                    />
-                  ) : null}
-                </>
-              ) : m.nome ? <p className="mt-2 text-sm text-muted">{codigo ? "Adicione alimentos para calcular o total." : "Sem referência de composição nas tabelas disponíveis."}</p> : null}
-              <AvisoFonteMicro nome={m.nome} />
-              {codigo === "sodio_total" ? (
-                <p className="mt-1 text-sm text-muted">Soma o sódio do alimento e o sódio de adição (sal do preparo) que o IBGE informa em colunas separadas. Na TACO o sódio já é o total.</p>
-              ) : null}
-            </div>
-          );
-        })}
-        {rascunho ? <Button type="button" variant="sand" onClick={() => setMicros((v) => [...v, { nome: "", unidade: "mg", meta: "" }])}>Adicionar micronutriente</Button> : null}
+        <div className="mt-3 flex flex-col gap-3">
+          {micros.map((m, i) => (
+            <LinhaMetaMicro
+              key={i}
+              m={m}
+              desabilitado={!rascunho}
+              itens={itensCardapio}
+              onChange={(parcial) => setMicros((v) => v.map((x, n) => (n === i ? { ...x, ...parcial } : x)))}
+              onRemover={() => setMicros((v) => v.filter((_, n) => n !== i))}
+            />
+          ))}
+        </div>
+        {rascunho ? <Button type="button" variant="sand" className="mt-3" onClick={() => setMicros((v) => [...v, { nome: "", unidade: "mg", meta: "" }])}><span aria-hidden="true">＋</span> Adicionar micronutriente</Button> : null}
       </div>
       <div className="mt-4 flex flex-col gap-3">
         {refs.map((ref, idx) => (
@@ -1035,24 +986,6 @@ function Editor({
             Nova versão
           </Button>
         )}
-      </div>
-    </div>
-  );
-}
-
-function Barra({ rotulo, valor, meta, unidade }: { rotulo: string; valor: number; meta: number; unidade: string }) {
-  const pct = meta > 0 ? Math.min(100, (valor / meta) * 100) : 0;
-  const estourou = meta > 0 && valor > meta * 1.05;
-  return (
-    <div>
-      <div className="flex justify-between text-sm">
-        <span>{rotulo}</span>
-        <span className="tabular-nums text-ink-2">
-          {fmtNum(valor, 0)} / {fmtNum(meta, 0)} {unidade}
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 rounded-full bg-sand">
-        <div className={estourou ? "h-full rounded-full bg-amber" : "h-full rounded-full bg-copper"} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -1293,9 +1226,7 @@ function Folha({
           {fmtData(plano.data)} · {plano.situacao}
           {plano.situacao !== "Emitida" ? " — sem valor de documento" : ""}
         </p>
-        <p className="mt-4 text-sm tabular-nums">
-          Meta {fmtNum(plano.kcalMeta, 0)} kcal · PTN {fmtNum(plano.protMeta, 0)} g · CHO {fmtNum(plano.carbMeta, 0)} g · LIP {fmtNum(plano.lipMeta, 0)} g
-        </p>
+        <MetasMacroChips kcal={plano.kcalMeta} ptn={plano.protMeta} cho={plano.carbMeta} lip={plano.lipMeta} fibra={plano.fibraMeta} />
         {plano.refeicoes.map((ref) => (
           <section key={ref.id} className="mt-6">
             <h3 className="font-serif text-xl">
@@ -1313,10 +1244,12 @@ function Folha({
             {ref.orientacao ? <p className="mt-1 text-sm text-ink-2">{ref.orientacao}</p> : null}
           </section>
         ))}
-        <p className="mt-6 text-sm tabular-nums text-ink-2">
-          Calculado: {fmtNum(totais.kcal, 0)} kcal · PTN {fmtNum(totais.ptn, 1)} g · CHO {fmtNum(totais.cho, 1)} g · LIP {fmtNum(totais.lip, 1)} g · fibra {fmtNum(totais.fibra, 1)} g
-        </p>
-        <ResumoMicronutrientes metas={plano.micronutrientes} itens={plano.refeicoes.flatMap((r) => r.itens)} />
+        <PainelMacros
+          titulo="Cálculo do cardápio"
+          totais={totais}
+          metas={{ kcal: plano.kcalMeta, ptn: plano.protMeta, cho: plano.carbMeta, lip: plano.lipMeta, fibra: plano.fibraMeta }}
+        />
+        <ResumoMicronutrientes variante="documento" metas={plano.micronutrientes} itens={plano.refeicoes.flatMap((r) => r.itens)} />
         {plano.hidratacao ? <p className="mt-2 text-sm">Hidratação: {plano.hidratacao}</p> : null}
         <p className="mt-8 text-xs text-muted">
           Orientação alimentar de {c.nutricionista}, {c.crn}. Não substitui o acompanhamento.

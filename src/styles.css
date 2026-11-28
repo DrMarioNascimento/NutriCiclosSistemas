@@ -11,9 +11,15 @@
   --color-copper-soft: #f6e6db;
   --color-ink: #2a1a10;
   --color-ink-2: #5b4535;
-  --color-muted: #8a7563;
+  --color-muted: #7a6552;
   --color-amber: #9a6a16;
   --color-amber-soft: #f8efd4;
+  --color-aviso: #6f4a08;
+  --color-ok: #2f6b3e;
+  --color-ok-soft: #e4f0e5;
+  --color-alerta: #9c2f23;
+  --color-alerta-soft: #f8e2dd;
+  --color-trilho: #e1cfb8;
   --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
@@ -191,6 +197,70 @@
   }
   .barra .nav-item[aria-current="page"] {
     box-shadow: inset 0 2px 0 var(--color-copper), inset 0 3px 0 rgba(255, 255, 255, 0.8);
+  }
+}
+
+@layer components {
+  /* Nutrientes: cartão com relevo, trilho afundado e barra que acompanha o valor. */
+  .nutri-card {
+    border: 1px solid #e4d4c2;
+    border-radius: 1rem;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(255, 252, 248, 0.4) 55%, rgba(214, 183, 149, 0.18));
+    background-color: var(--color-paper);
+    box-shadow: var(--depth-panel);
+  }
+  .nutri-trilho {
+    position: relative;
+    height: 0.875rem;
+    border-radius: 999px;
+    background: var(--color-trilho);
+    border: 1px solid #cdb396;
+    box-shadow: var(--depth-inset);
+  }
+  .nutri-fill {
+    height: 100%;
+    border-radius: 999px;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 55%, rgba(0, 0, 0, 0.12));
+    box-shadow: 0 1px 0 rgba(66, 39, 21, 0.25);
+    transition: width 320ms ease;
+  }
+  .nutri-marca {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: var(--color-ink);
+  }
+  .nutri-resumo {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    background: var(--color-sand);
+    border: 1px solid var(--depth-edge);
+    box-shadow: var(--depth-control);
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .nutri-resumo::-webkit-details-marker { display: none; }
+  .nutri-resumo:active { transform: translateY(2px); box-shadow: var(--depth-inset); }
+  details[open] > .nutri-resumo .nutri-seta { transform: rotate(180deg); }
+  .nutri-seta { transition: transform 150ms ease; }
+  :where(.nutri-resumo):focus-visible { outline: 2px solid var(--color-copper-deep); outline-offset: 3px; }
+  .nutri-anel { transition: stroke-dasharray 320ms ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .nutri-fill, .nutri-anel, .nutri-seta, .nutri-resumo { transition: none; }
+  }
+  @media print {
+    .nutri-card { box-shadow: none; background: #fff; border: 1px solid #8a7563; break-inside: avoid; }
+    .nutri-trilho { box-shadow: none; border-color: #5b4535; }
+    .nutri-fill, .nutri-card *, .nutri-trilho { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 }
 

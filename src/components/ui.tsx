@@ -11,7 +11,7 @@ export function cx(...parts: Array<string | false | null | undefined>) {
 }
 
 const field =
-  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-base text-ink focus:border-copper";
+  "min-h-[46px] w-full rounded-lg border border-line bg-paper px-3 py-2 text-base text-ink focus:border-copper";
 
 export function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -48,7 +48,7 @@ export function Button({
       {...props}
       data-variant={variant}
       className={cx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-50",
+        "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:opacity-50",
         look,
         props.className,
       )}
