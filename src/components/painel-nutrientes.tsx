@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  agruparAnalises, analisarMetas, avisoDados, fmtPct, fmtValor, larguraBarra, listarMacros, resumirEstados,
+  agruparAnalises, analisarMetas, avisoDados, separarDestaques, fmtPct, fmtValor, larguraBarra, listarMacros, resumirEstados,
   POSICAO_MARCA, type AnaliseMeta, type MetasMacro, type Tom, type TotaisMacro,
 } from "@/lib/clinic/apresentacao-micro";
 import { CATALOGO_MICRO, converterUnidade } from "@/lib/clinic/composicao-micro";
@@ -70,21 +70,28 @@ function FontesFixas({ a }: { a: AnaliseMeta }) {
 }
 
 export function LinhaNutriente({ a, fixo = false }: { a: AnaliseMeta; fixo?: boolean }) {
+  const destaque = a.destaque || a.promovido;
+  if (destaque) fixo = true;
   const est = a.estado;
   const tom: Tom = est?.tom ?? "aviso";
   const aviso = avisoDados(a);
   const palavra = a.teto ? "Limite" : "Meta";
   const nome = a.codigo ? a.meta.nome.replace(/ \(.*\)$/, "") : a.meta.nome;
   return (
-    <article className="nutri-card p-3.5" style={{ borderLeft: `6px solid ${est ? TONS[tom].cor : "var(--color-line)"}` }}>
+    <article className={`nutri-card ${destaque ? "nutri-card-destaque p-4" : "p-3.5"}`} style={{ borderLeft: `${destaque ? 8 : 6}px solid ${est ? TONS[tom].cor : "var(--color-line)"}` }}>
+      {destaque ? (
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: a.promovido ? "var(--color-alerta)" : "var(--color-copper-deep)" }}>
+          {a.promovido ? <><span aria-hidden="true">▲ </span>Subiu para o destaque: passou do limite</> : <><span aria-hidden="true">★ </span>Em destaque</>}
+        </p>
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="font-sans text-base font-semibold leading-snug">{nome}</h4>
+          <h4 className={`font-sans font-semibold leading-snug ${destaque ? "text-lg" : "text-base"}`}>{nome}</h4>
           <p className="text-sm text-ink-2">{palavra} de {fmtValor(a.meta.meta)} {a.unidade} por dia</p>
         </div>
         {est ? (
           <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <p className="min-w-[4ch] text-right text-3xl font-bold leading-none tabular-nums" style={{ color: TONS[tom].texto }}>{fmtPct(a.pct)}</p>
+            <p className={`min-w-[4ch] text-right font-bold leading-none tabular-nums ${destaque ? "text-4xl" : "text-3xl"}`} style={{ color: TONS[tom].texto }}>{fmtPct(a.pct)}</p>
             <SeloEstado tom={est.tom} icone={est.icone} rotulo={est.rotulo} />
           </div>
         ) : null}
@@ -128,9 +135,9 @@ function LinhaDocumento({ a }: { a: AnaliseMeta }) {
   const tom: Tom = est?.tom ?? "aviso";
   const aviso = avisoDados(a);
   return (
-    <li className="break-inside-avoid border-b border-line py-2.5">
+    <li className={`break-inside-avoid border-b border-line py-2.5 ${a.destaque || a.promovido ? "-mx-2 rounded-lg px-2" : ""}`} style={a.destaque || a.promovido ? { background: "var(--color-copper-soft)" } : undefined}>
       <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
-        <span className="font-semibold">{a.meta.nome.replace(/ \(.*\)$/, "")}</span>
+        <span className="font-semibold">{a.destaque ? <span aria-label="em destaque">★ </span> : a.promovido ? <span aria-label="passou do limite">▲ </span> : null}{a.meta.nome.replace(/ \(.*\)$/, "")}</span>
         {est ? <span className="text-lg font-bold tabular-nums" style={{ color: TONS[tom].texto }}>{fmtPct(a.pct)}</span> : null}
         <span className="text-sm text-ink-2">{a.teto ? "Limite" : "Meta"} {fmtValor(a.meta.meta)} {a.unidade}{est ? ` · total ${fmtValor(a.total)} ${a.unidade}` : ""}</span>
         {est ? <span className="text-right text-sm font-semibold" style={{ color: TONS[tom].texto }}><span aria-hidden="true">{est.icone} </span>{est.rotulo}</span> : null}
@@ -175,11 +182,12 @@ export function ResumoEstados({ analises }: { analises: AnaliseMeta[] }) {
 
 /** Metas escolhidas, sem cardápio para comparar (avaliação, dieta, histórico). */
 function ListaMetas({ analises }: { analises: AnaliseMeta[] }) {
+  const ordenadas = [...analises.filter((a) => a.destaque), ...analises.filter((a) => !a.destaque)];
   return (
     <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-      {analises.map((a, i) => (
+      {ordenadas.map((a, i) => (
         <li key={i} className="nutri-card flex min-h-[46px] items-center justify-between gap-3 px-3 py-2" style={{ borderLeft: `6px solid ${a.teto ? "var(--color-alerta)" : "var(--color-copper)"}` }}>
-          <span className="min-w-0 font-semibold leading-snug">{a.meta.nome.replace(/ \(.*\)$/, "")}</span>
+          <span className="min-w-0 font-semibold leading-snug">{a.destaque ? <span className="text-copper-deep" aria-label="em destaque">★ </span> : null}{a.meta.nome.replace(/ \(.*\)$/, "")}</span>
           <span className="shrink-0 text-right text-sm tabular-nums text-ink-2">
             <span className="mr-1.5 text-xs font-semibold uppercase tracking-wide">{a.teto ? "Limite" : "Meta"}</span>
             <strong className="text-ink">{fmtValor(a.meta.meta)} {a.unidade}</strong>
@@ -200,6 +208,7 @@ export function PainelMicros({ metas, itens, titulo = "Micronutrientes acompanha
   const analises = analisarMetas(metas, itens);
   const comCardapio = Boolean(itens?.length);
   const invalidos = analises.filter((a) => !a.reconhecido);
+  const { destaques, restantes } = separarDestaques(analises);
   return (
     <section className="mt-6" aria-label={titulo}>
       <h3 className="font-serif text-2xl">{titulo}</h3>
@@ -207,17 +216,31 @@ export function PainelMicros({ metas, itens, titulo = "Micronutrientes acompanha
       {!comCardapio ? (
         <ListaMetas analises={analises.filter((a) => a.reconhecido)} />
       ) : (
-        agruparAnalises(analises).map((g) => (
-          <div key={g.grupo} className="mt-5">
-            <h4 className="font-serif text-xl">{g.titulo}</h4>
-            <p className="text-sm text-ink-2">{g.dica}</p>
-            {variante === "documento" ? (
-              <ul className="mt-2">{g.itens.map((a, i) => <LinhaDocumento key={i} a={a} />)}</ul>
-            ) : (
-              <div className="mt-3 flex flex-col gap-4">{g.itens.map((a, i) => <LinhaNutriente key={i} a={a} />)}</div>
-            )}
-          </div>
-        ))
+        <>
+          {destaques.length ? (
+            <div className="mt-5">
+              <h4 className="font-serif text-xl">Em destaque</h4>
+              <p className="text-sm text-ink-2">Escolhidos para acompanhar de perto.</p>
+              {variante === "documento" ? (
+                <ul className="mt-2">{destaques.map((a, i) => <LinhaDocumento key={i} a={a} />)}</ul>
+              ) : (
+                <div className="mt-3 flex flex-col gap-4">{destaques.map((a, i) => <LinhaNutriente key={i} a={a} />)}</div>
+              )}
+            </div>
+          ) : null}
+          {agruparAnalises(restantes).map((g, gi) => (
+            <div key={g.grupo} className="mt-5">
+              {destaques.length && gi === 0 ? <p className="mb-3 border-t border-line pt-4 text-sm font-semibold uppercase tracking-wide text-ink-2">Demais nutrientes</p> : null}
+              <h4 className="font-serif text-xl">{g.titulo}</h4>
+              <p className="text-sm text-ink-2">{g.dica}</p>
+              {variante === "documento" ? (
+                <ul className="mt-2">{g.itens.map((a, i) => <LinhaDocumento key={i} a={a} />)}</ul>
+              ) : (
+                <div className="mt-3 flex flex-col gap-4">{g.itens.map((a, i) => <LinhaNutriente key={i} a={a} />)}</div>
+              )}
+            </div>
+          ))}
+        </>
       )}
       {invalidos.length ? <div className="mt-4 flex flex-col gap-2">{invalidos.map((a, i) => <AlertaNaoReconhecido key={i} nome={a.meta.nome} />)}</div> : null}
     </section>

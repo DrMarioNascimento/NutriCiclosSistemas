@@ -95,3 +95,12 @@ test("a TACO não tem os nutrientes marcados como só do IBGE", () => {
     assert.ok(presentes.has(codigo), `${codigo} sumiu da TACO`);
   }
 });
+
+test("destaque é lido, limitado a 5 e ignora valores que não sejam verdadeiros", () => {
+  const nomes = ["Cálcio", "Ferro", "Zinco", "Magnésio", "Potássio", "Selênio", "Cobre"];
+  const metas = lerMetasMicro(nomes.map((nome) => ({ nome, unidade: "mg", meta: 10, destaque: true })));
+  assert.equal(metas.filter((m) => m.destaque).length, 5);
+  assert.equal(metas.length, 7);
+  const m = lerMetasMicro([{ nome: "Cálcio", unidade: "mg", meta: 10, destaque: "sim" }, { nome: "Ferro", unidade: "mg", meta: 8, destaque: false }]);
+  assert.deepEqual(m.map((x) => x.destaque), [undefined, undefined]);
+});

@@ -130,6 +130,10 @@ export type AnaliseMeta = {
   parcial: boolean;
   /** Nenhum alimento tem valor quantificado para este nutriente. */
   semValor: boolean;
+  /** A nutricionista marcou este nutriente para acompanhar de perto neste paciente. */
+  destaque: boolean;
+  /** Não foi marcado, mas passou do limite e por isso sobe para o destaque. */
+  promovido: boolean;
   estado?: EstadoNutriente;
   fontes: FonteNutriente[];
 };
@@ -140,7 +144,7 @@ export function analisarMeta(
 ): AnaliseMeta {
   const codigo = codigoMicronutriente(meta.nome);
   const teto = (meta.tipo ?? tipoPadraoMeta(codigo)) === "teto";
-  const base = { meta, codigo, reconhecido: Boolean(codigo), teto, unidade: meta.unidade, itens: itens?.length ?? 0 };
+  const base = { meta, codigo, reconhecido: Boolean(codigo), teto, unidade: meta.unidade, itens: itens?.length ?? 0, destaque: Boolean(codigo) && meta.destaque === true, promovido: false };
   if (!codigo) {
     return { ...base, grupo: "outros", total: 0, pct: 0, medidos: 0, semDados: 0, tracos: 0, parcial: false, semValor: true, fontes: [] };
   }
@@ -183,6 +187,22 @@ export function resumirEstados(analises: readonly AnaliseMeta[]): ResumoEstados 
     else r.atencao++;
   }
   return r;
+}
+
+/**
+ * Separa o que fica em destaque do resto. Entram no destaque, na ordem escolhida, os marcados pela nutricionista;
+ * depois sobem sozinhos os não marcados que passaram do limite (para ninguém perder um problema por esquecer de marcar).
+ */
+export function separarDestaques(analises: readonly AnaliseMeta[]) {
+  const marcados = analises.filter((a) => a.reconhecido && a.destaque);
+  const promovidos = analises
+    .filter((a) => a.reconhecido && !a.destaque && a.estado?.id === "acima")
+    .map((a) => ({ ...a, promovido: true }));
+  const emDestaque = new Set([...marcados, ...analises.filter((a) => promovidos.some((p) => p.meta === a.meta))].map((a) => a.meta));
+  return {
+    destaques: [...marcados, ...promovidos],
+    restantes: analises.filter((a) => !emDestaque.has(a.meta)),
+  };
 }
 
 /** Agrupa e ordena: o que pede atenção sobe; nutrientes de mesma prioridade mantêm a ordem em que foram escolhidos. */

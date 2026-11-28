@@ -160,15 +160,23 @@ export function somarMicronutriente(itens: readonly { composicaoMicro?: Composic
   return { total, medidos, tracos, semDados: itens.length - medidos - tracos };
 }
 
+export const MAX_DESTAQUES_MICRO = 5;
+
 export function lerMetasMicro(valor: unknown): MetaMicronutriente[] {
   if (!Array.isArray(valor)) return [];
+  let destaques = 0;
   return valor.slice(0, 30).flatMap((meta) => {
     if (!meta || typeof meta !== "object") return [];
     const { nome, unidade, meta: quantidade } = meta;
     if (typeof nome !== "string" || !nome.trim() || !["mg", "µg", "g"].includes(unidade)) return [];
     if (typeof quantidade !== "number" || !Number.isFinite(quantidade) || quantidade <= 0 || quantidade > 1000000) return [];
-    const { tipo } = meta as { tipo?: unknown };
-    const base = { nome: nome.trim().slice(0, 80), unidade, meta: quantidade };
-    return [tipo === "minimo" || tipo === "teto" ? { ...base, tipo } : base];
+    const { tipo, destaque } = meta as { tipo?: unknown; destaque?: unknown };
+    const base: MetaMicronutriente = { nome: nome.trim().slice(0, 80), unidade, meta: quantidade };
+    if (tipo === "minimo" || tipo === "teto") base.tipo = tipo;
+    if (destaque === true && destaques < MAX_DESTAQUES_MICRO) {
+      base.destaque = true;
+      destaques++;
+    }
+    return [base];
   });
 }

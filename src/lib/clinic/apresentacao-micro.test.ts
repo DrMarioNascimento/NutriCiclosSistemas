@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  agruparAnalises, analisarMeta, avisoDados, estadoMacro, estadoNutriente, fmtValor, grupoDoNutriente,
+  agruparAnalises, analisarMeta, separarDestaques, avisoDados, estadoMacro, estadoNutriente, fmtValor, grupoDoNutriente,
   larguraBarra, listarMacros, maioresFontes, resumirEstados, somarMacros, POSICAO_MARCA,
 } from "./apresentacao-micro.ts";
 import { avisoPotassio, montarSugestaoMulti, perfisSugeridos, PERFIS_MICRO } from "./perfis-micro.ts";
@@ -147,4 +147,36 @@ test("aviso de potássio só aparece com risco renal ou remédio que retém pot�
   assert.match(avisoPotassio({ sexo: "M", idade: 60, patologias: "Doença renal crônica" }, pot) ?? "", /renal/);
   assert.equal(avisoPotassio({ sexo: "M", idade: 60, patologias: "Hipertensão" }, pot), null);
   assert.equal(avisoPotassio({ sexo: "M", idade: 60, medicamentos: "Losartana" }, ["calcio"]), null);
+});
+
+test("destaque: marcados vêm primeiro e, sem cardápio, ficam todos como marcados", () => {
+  const metas = [
+    { nome: "Cálcio", unidade: "mg" as const, meta: 1000 },
+    { nome: "Ferro", unidade: "mg" as const, meta: 8, destaque: true },
+    { nome: "Magnésio", unidade: "mg" as const, meta: 320, destaque: true },
+  ];
+  const { destaques, restantes } = separarDestaques(metas.map((m) => analisarMeta(m, undefined)));
+  assert.deepEqual(destaques.map((a) => a.meta.nome), ["Ferro", "Magnésio"]);
+  assert.deepEqual(restantes.map((a) => a.meta.nome), ["Cálcio"]);
+  assert.ok(destaques.every((a) => !a.promovido));
+});
+
+test("destaque: quem passou do limite sobe sozinho, sem duplicar o que já estava marcado", () => {
+  const it = [{ alimentoNome: "Ovo", composicaoMicro: { colesterol: 500, ag_saturados: 30, calcio: 10 } }];
+  const metas = [
+    { nome: "Colesterol", unidade: "mg" as const, meta: 300, tipo: "teto" as const },
+    { nome: "Gordura saturada", unidade: "g" as const, meta: 20, tipo: "teto" as const, destaque: true },
+    { nome: "Cálcio", unidade: "mg" as const, meta: 1000 },
+  ];
+  const { destaques, restantes } = separarDestaques(metas.map((m) => analisarMeta(m, it)));
+  assert.deepEqual(destaques.map((a) => a.meta.nome), ["Gordura saturada", "Colesterol"]);
+  assert.equal(destaques[0].promovido, false);
+  assert.equal(destaques[1].promovido, true);
+  assert.deepEqual(restantes.map((a) => a.meta.nome), ["Cálcio"]);
+});
+
+test("destaque: nome não reconhecido nunca vira destaque", () => {
+  const a = analisarMeta({ nome: "Vit C", unidade: "mg", meta: 75, destaque: true }, undefined);
+  assert.equal(a.destaque, false);
+  assert.equal(separarDestaques([a]).destaques.length, 0);
 });

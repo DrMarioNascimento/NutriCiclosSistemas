@@ -209,6 +209,27 @@
     background-color: var(--color-paper);
     box-shadow: var(--depth-panel);
   }
+  .nutri-card-destaque {
+    border-color: #cfa57c;
+    box-shadow: var(--depth-panel), 0 0 0 2px rgba(180, 99, 58, 0.22);
+  }
+  .nutri-card-destaque .nutri-trilho { height: 1.125rem; }
+  .nutri-janela {
+    width: min(34rem, calc(100% - 1.5rem));
+    max-height: min(88vh, 40rem);
+    padding: 0;
+    border: 1px solid #d8c4ad;
+    border-radius: 1.25rem;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    box-shadow: var(--depth-panel), 0 24px 70px rgba(42, 26, 16, 0.4);
+    overflow: hidden;
+  }
+  .nutri-janela[open] { display: flex; flex-direction: column; }
+  .nutri-janela::backdrop { background: rgba(42, 26, 16, 0.58); }
+  @media (max-width: 639px) {
+    .nutri-janela { width: 100%; max-width: 100%; margin: auto 0 0 0; border-radius: 1.25rem 1.25rem 0 0; max-height: 90vh; }
+  }
   .nutri-trilho {
     position: relative;
     height: 0.875rem;

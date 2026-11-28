@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CATALOGO_MICRO,
+  MAX_DESTAQUES_MICRO,
   SO_NO_IBGE,
   codigoMicronutriente,
   tipoPadraoMeta,
@@ -21,7 +22,12 @@ export function editarMetasMicro(metas: MetaMicronutriente[] = []): MetaMicroEdi
   return metas.map((m) => ({ ...m, meta: String(m.meta) }));
 }
 
+export function contarDestaques(metas: readonly { destaque?: boolean }[]) {
+  return metas.filter((m) => m.destaque).length;
+}
+
 export function validarMetasMicro(metas: MetaMicroEditavel[]): MetaMicronutriente[] {
+  if (contarDestaques(metas) > MAX_DESTAQUES_MICRO) throw new Error(`Escolha no máximo ${MAX_DESTAQUES_MICRO} micronutrientes em destaque.`);
   return metas.map((m) => {
     const nome = m.nome.trim();
     const meta = Number(m.meta.replace(",", "."));
@@ -31,7 +37,7 @@ export function validarMetasMicro(metas: MetaMicroEditavel[]): MetaMicronutrient
     if (!codigoMicronutriente(nome)) {
       throw new Error(`“${nome}” não é um nutriente reconhecido. Escolha o nutriente na lista.`);
     }
-    return { nome, unidade: m.unidade, meta, tipo: m.tipo ?? tipoPadraoMeta(codigoMicronutriente(nome)) };
+    return { nome, unidade: m.unidade, meta, tipo: m.tipo ?? tipoPadraoMeta(codigoMicronutriente(nome)), ...(m.destaque ? { destaque: true } : {}) };
   });
 }
 
@@ -44,13 +50,14 @@ export function AvisoFonteMicro({ nome }: { nome: string }) {
 const GRUPOS_SELETOR = opcoesPorGrupo();
 
 /** Uma meta de micronutriente: escolha na lista (sem digitar nome), valor, unidade, mínimo ou teto, e o total do cardápio quando houver. */
-export function LinhaMetaMicro({ m, onChange, onRemover, desabilitado = false, itens, nota }: {
+export function LinhaMetaMicro({ m, onChange, onRemover, desabilitado = false, itens, nota, podeDestacar = true }: {
   m: MetaMicroEditavel;
   onChange: (parcial: Partial<MetaMicroEditavel>) => void;
   onRemover?: () => void;
   desabilitado?: boolean;
   itens?: ItemPlano[];
   nota?: string;
+  podeDestacar?: boolean;
 }) {
   const codigo = codigoMicronutriente(m.nome);
   const tipo: TipoMeta = m.tipo ?? tipoPadraoMeta(codigo);
@@ -65,26 +72,39 @@ export function LinhaMetaMicro({ m, onChange, onRemover, desabilitado = false, i
 
   return (
     <div className="nutri-card p-3" style={{ borderLeft: `6px solid ${naoReconhecido ? "var(--color-amber)" : tom ? TONS[tom].cor : "var(--color-copper)"}` }}>
-      <Campo label="Nutriente">
-        <Select
-          value={codigo ?? (m.nome.trim() ? "__atual" : "")}
-          disabled={desabilitado}
-          onChange={(e) => {
-            const novo = e.target.value as CodigoMicro;
-            if (!(novo in CATALOGO_MICRO)) return;
-            const [nome, unidade] = CATALOGO_MICRO[novo];
-            onChange({ nome, unidade: unidade as MetaMicroEditavel["unidade"], tipo: tipoPadraoMeta(novo) });
-          }}
+      <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+        <Campo label="Nutriente">
+          <Select
+            value={codigo ?? (m.nome.trim() ? "__atual" : "")}
+            disabled={desabilitado}
+            onChange={(e) => {
+              const novo = e.target.value as CodigoMicro;
+              if (!(novo in CATALOGO_MICRO)) return;
+              const [nome, unidade] = CATALOGO_MICRO[novo];
+              onChange({ nome, unidade: unidade as MetaMicroEditavel["unidade"], tipo: tipoPadraoMeta(novo) });
+            }}
+          >
+            <option value="" disabled>Escolha o nutriente</option>
+            {naoReconhecido ? <option value="__atual" disabled>{m.nome} (não reconhecido)</option> : null}
+            {GRUPOS_SELETOR.map((g) => (
+              <optgroup key={g.titulo} label={g.titulo}>
+                {g.codigos.map((c) => <option key={c} value={c}>{CATALOGO_MICRO[c][0]}</option>)}
+              </optgroup>
+            ))}
+          </Select>
+        </Campo>
+        <button
+          type="button"
+          aria-pressed={Boolean(m.destaque)}
+          aria-label={m.destaque ? `Tirar ${m.nome} do destaque` : `Destacar ${m.nome || "nutriente"}`}
+          title={!m.destaque && !podeDestacar ? `Já há ${MAX_DESTAQUES_MICRO} em destaque` : m.destaque ? "Em destaque" : "Destacar"}
+          disabled={desabilitado || !codigo || (!m.destaque && !podeDestacar)}
+          onClick={() => onChange({ destaque: !m.destaque })}
+          className={cx("min-h-[46px] min-w-[46px] rounded-lg text-2xl leading-none", m.destaque ? "bg-copper text-paper" : "bg-paper text-ink-2")}
         >
-          <option value="" disabled>Escolha o nutriente</option>
-          {naoReconhecido ? <option value="__atual" disabled>{m.nome} (não reconhecido)</option> : null}
-          {GRUPOS_SELETOR.map((g) => (
-            <optgroup key={g.titulo} label={g.titulo}>
-              {g.codigos.map((c) => <option key={c} value={c}>{CATALOGO_MICRO[c][0]}</option>)}
-            </optgroup>
-          ))}
-        </Select>
-      </Campo>
+          <span aria-hidden="true">{m.destaque ? "★" : "☆"}</span>
+        </button>
+      </div>
       {naoReconhecido ? (
         <p role="alert" className="mt-2 rounded-lg px-2.5 py-1.5 text-sm" style={{ background: "var(--color-amber-soft)", color: "var(--color-aviso)" }}>
           “{m.nome}” não é um nutriente reconhecido: nenhum total será calculado. Escolha na lista acima.
@@ -158,6 +178,54 @@ export function LinhaMetaMicro({ m, onChange, onRemover, desabilitado = false, i
   );
 }
 
+/** Janela para marcar, de uma vez, os micronutrientes a acompanhar de perto neste paciente. */
+export function JanelaDestaques({ metas, onChange }: { metas: MetaMicroEditavel[]; onChange: (metas: MetaMicroEditavel[]) => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const marcados = contarDestaques(metas);
+  const lista = metas.map((m, i) => ({ m, i })).filter(({ m }) => codigoMicronutriente(m.nome));
+  if (!lista.length) return null;
+  const alternar = (i: number) => onChange(metas.map((m, n) => (n === i ? { ...m, destaque: !m.destaque } : m)));
+  return (
+    <>
+      <Button type="button" variant="sand" onClick={() => ref.current?.showModal()}>
+        <span aria-hidden="true">★</span> Escolher destaques ({marcados} de {MAX_DESTAQUES_MICRO})
+      </Button>
+      <dialog
+        ref={ref}
+        className="nutri-janela"
+        aria-labelledby="titulo-destaques"
+        onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+          <div>
+            <h3 id="titulo-destaques" className="font-serif text-2xl">Escolher destaques</h3>
+            <p className="mt-1 text-sm text-ink-2">Marque até {MAX_DESTAQUES_MICRO} nutrientes para acompanhar de perto neste paciente. Eles aparecem primeiro, em cartões maiores.</p>
+          </div>
+          <Button type="button" variant="ghost" aria-label="Fechar" onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></Button>
+        </div>
+        <ul className="flex-1 overflow-y-auto p-3">
+          {lista.map(({ m, i }) => {
+            const bloqueado = !m.destaque && marcados >= MAX_DESTAQUES_MICRO;
+            return (
+              <li key={i}>
+                <label className={cx("flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl px-3 py-2", bloqueado ? "opacity-60" : "hover:bg-sand")}>
+                  <input type="checkbox" className="h-6 w-6 shrink-0 accent-[var(--color-copper)]" checked={Boolean(m.destaque)} disabled={bloqueado} onChange={() => alternar(i)} />
+                  <span className="min-w-0 flex-1 font-semibold leading-snug">{m.nome.replace(/ \(.*\)$/, "")}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-ink-2">{(m.tipo ?? tipoPadraoMeta(codigoMicronutriente(m.nome))) === "teto" ? "limite" : "meta"} {m.meta} {m.unidade}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex items-center justify-between gap-3 border-t border-line p-4">
+          <p className="text-sm font-semibold tabular-nums" aria-live="polite">{marcados} de {MAX_DESTAQUES_MICRO} em destaque</p>
+          <Button type="button" onClick={() => ref.current?.close()}>Pronto</Button>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
 export function SugestaoMicros({ metas, onChange, contexto }: {
   metas: MetaMicroEditavel[];
   onChange: (metas: MetaMicroEditavel[]) => void;
@@ -222,9 +290,10 @@ export function MetasMicroEditor({ metas, onChange, contexto }: {
     <section className="mt-4 rounded-2xl border border-line p-4">
       <h3 className="font-serif text-2xl">Micronutrientes opcionais</h3>
       {contexto ? <SugestaoMicros metas={metas} onChange={onChange} contexto={contexto} /> : null}
+      {metas.length ? <div className="mt-3"><JanelaDestaques metas={metas} onChange={onChange} /></div> : null}
       <div className="mt-3 flex flex-col gap-3">
         {metas.map((m, i) => (
-          <LinhaMetaMicro key={i} m={m} onChange={(p) => alterar(i, p)} onRemover={() => onChange(metas.filter((_, n) => n !== i))} />
+          <LinhaMetaMicro key={i} m={m} podeDestacar={contarDestaques(metas) < MAX_DESTAQUES_MICRO} onChange={(p) => alterar(i, p)} onRemover={() => onChange(metas.filter((_, n) => n !== i))} />
         ))}
       </div>
       <Button type="button" variant="sand" className="mt-3" disabled={metas.length >= 30} onClick={() => onChange([...metas, { nome: "", unidade: "mg", meta: "" }])}>

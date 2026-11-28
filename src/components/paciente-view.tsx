@@ -29,7 +29,7 @@ import {
   sugerirKcal,
 } from "@/lib/clinic/calc";
 import type { AlimentoBusca, Avaliacao, Paciente, Prescricao, Prontuario, Refeicao } from "@/lib/clinic/types";
-import { editarMetasMicro, LinhaMetaMicro, MetasMicroEditor, ResumoMicronutrientes, SugestaoMicros, validarMetasMicro } from "./micronutrientes-view";
+import { contarDestaques, editarMetasMicro, JanelaDestaques, LinhaMetaMicro, MetasMicroEditor, ResumoMicronutrientes, SugestaoMicros, validarMetasMicro } from "./micronutrientes-view";
 import { MetasMacroChips, PainelMacros } from "./painel-nutrientes";
 import { EvolucaoPainel } from "./evolucao-view";
 import { EntregaPlano } from "./entrega-view";
@@ -942,11 +942,13 @@ function Editor({
           Composição por porção com dados da <a className="underline" href={LINK_TACO} target="_blank" rel="noreferrer">{FONTE_TACO}</a> e do <a className="underline" href={LINK_IBGE} target="_blank" rel="noreferrer">{FONTE_IBGE}</a>.
         </p>
         {rascunho ? <SugestaoMicros metas={micros} onChange={setMicros} contexto={contextoMicro} /> : null}
+        {rascunho && micros.length ? <div className="mt-3"><JanelaDestaques metas={micros} onChange={setMicros} /></div> : null}
         <div className="mt-3 flex flex-col gap-3">
           {micros.map((m, i) => (
             <LinhaMetaMicro
               key={i}
               m={m}
+              podeDestacar={contarDestaques(micros) < 5}
               desabilitado={!rascunho}
               itens={itensCardapio}
               onChange={(parcial) => setMicros((v) => v.map((x, n) => (n === i ? { ...x, ...parcial } : x)))}

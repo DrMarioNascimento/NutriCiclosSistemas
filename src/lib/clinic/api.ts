@@ -980,7 +980,8 @@ const metasMicroInput = z.array(z.object({
   unidade: z.enum(["mg", "µg", "g"]),
   meta: z.number().positive().max(1000000),
   tipo: z.enum(["minimo", "teto"]).optional(),
-})).max(30).optional();
+  destaque: z.boolean().optional(),
+})).max(30).refine((metas) => metas.filter((m) => m.destaque).length <= 5, "No máximo 5 micronutrientes em destaque.").optional();
 
 const avaliacaoInput = z.object({
   pacienteId: z.number().int().positive(),
